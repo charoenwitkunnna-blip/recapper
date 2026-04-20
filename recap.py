@@ -1,14 +1,12 @@
 from seleniumbase import SB
 from PIL import Image
 from gtts import gTTS
-import pytesseract
 import io
 import base64
 import requests
 import os
 import time
 import subprocess
-import re
 
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
 
@@ -58,7 +56,7 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
     try: sb.uc_gui_click_captcha()
     except Exception: pass 
         
-    print("Waiting for Cloudflare redirect to finish (up to 30s)...")
+    print("Waiting for Cloudflare redirect to finish...")
     try: sb.wait_for_element(".wp-manga-chapter-img", timeout=30)
     except Exception: exit(1)
 
@@ -86,7 +84,7 @@ headers = {
 }
 
 video_files =[]
-story_context =[] # THIS HOLDS THE MEMORY OF THE STORY
+story_context =[]
 
 for idx, img_url in enumerate(image_urls):
     if idx > 0: 
@@ -118,57 +116,73 @@ for idx, img_url in enumerate(image_urls):
         img_path = f"videos/temp/panel_{p_idx}.jpg"
         panel.save(img_path, format="JPEG")
 
-        # --- EXTRACT TEXT WITH TESSERACT OCR ---
-        extracted_text = pytesseract.image_to_string(panel).strip()
-        # Clean up weird Tesseract artifacts
-        extracted_text = re.sub(r'[^A-Za-z0-9 .,!?\'"]+', '', extracted_text)
-        
-        text_hint = f'The characters are saying or thinking: "{extracted_text}".' if len(extracted_text) > 3 else "No text visible."
-        recent_story = " ".join(story_context[-2:]) if story_context else "The story begins here."
-
         buffered = io.BytesIO()
         panel.save(buffered, format="JPEG")
         encoded_string = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-        # --- THE NEW "PERSONA" PROMPT WITH STORY CONTEXT ---
-        prompt = f"""You are a dramatic voiceover narrator for an epic manhwa recap video.
-        Recent story events: {recent_story}
-        {text_hint}
-        
-        Task: Based on the image and text, write exactly ONE engaging sentence narrating what the characters are doing or saying. 
-        Rule 1: DO NOT say "In this panel", "The image shows", "This drawing", or describe logos/watermarks.
-        Rule 2: Focus ONLY on narrating the action and emotion of the story.
-        Rule 3: If the image is just a logo, a title, or blank background, reply EXACTLY with the word: SKIP
-        """
-
-        payload = {
+        # ==========================================
+        # AI STEP 1: OBJECTIVE IMAGE DESCRIPTION
+        # ==========================================
+        print("     [Step 1] Analyzing image visuals...")
+        payload_1 = {
             "model": "moondream",
-            "prompt": prompt,
-            "images": [encoded_string],
+            "prompt": "Analyze this comic panel. Describe exactly what the characters look like, their facial expressions, and the action they are performing. Be highly detailed. Do not tell a story.",
+            "images":[encoded_string],
             "stream": False
         }
         
-        ai_response = requests.post("http://localhost:11434/api/generate", json=payload, timeout=120)
-        description = ai_response.json().get('response', 'SKIP').strip()
-        
-        # --- FILTER GARBAGE OUTPUTS ---
-        if "SKIP" in description or len(description) < 10 or description.startswith("?"):
-            print(f"     [!] AI discarded panel (Not story relevant): {description}")
-            continue # SKIP MAKING A VIDEO FOR THIS PANEL!
-            
-        # Clean text for TTS
-        description = description.replace("*", "").replace("#", "").replace('"', '')
-        print(f"     Narrator: {description}")
-        
-        # Add to rolling memory
-        story_context.append(description)
+        res_1 = requests.post("http://localhost:11434/api/generate", json=payload_1, timeout=120)
+        raw_visuals = res_1.json().get('response', '').strip()
 
-        # Generate TTS Audio
+        # Filter out bounding box coordinate glitches
+        if "[" in raw_visuals or "]" in raw_visuals or len(raw_visuals) < 10:
+            print("     [!] AI failed visual analysis. Skipping panel.")
+            continue
+
+        # ==========================================
+        # AI STEP 2: STORY NARRATOR (Text Only)
+        # ==========================================
+        print("     [Step 2] Writing narrator script...")
+        recent_story = " ".join(story_context[-2:]) if story_context else "The story begins here."
+        
+        script_prompt = f"""You are a dramatic YouTube Shorts narrator for an epic manhwa.
+Previous story events: {recent_story}
+
+Raw visual observation of the next scene: "{raw_visuals}"
+
+Based ONLY on the observation, write ONE punchy, engaging sentence narrating what happens next in the story.
+Rule 1: Make it sound like a dramatic story. 
+Rule 2: Do NOT say "The image shows", "In this panel", or "The character is".
+Rule 3: If the observation just describes a logo, a title, or a blank page, reply EXACTLY with the word: SKIP
+"""
+
+        payload_2 = {
+            "model": "moondream",
+            "prompt": script_prompt,
+            "stream": False
+            # Notice: No images are sent here! Moondream acts purely as a text-writer.
+        }
+        
+        res_2 = requests.post("http://localhost:11434/api/generate", json=payload_2, timeout=120)
+        narrator_script = res_2.json().get('response', '').strip()
+
+        # Clean text and filter skips
+        narrator_script = narrator_script.replace("*", "").replace('"', '').strip()
+        
+        if "SKIP" in narrator_script.upper() or len(narrator_script) < 15:
+            print(f"     [!] Panel skipped (Deemed non-story relevant).")
+            continue
+            
+        print(f"     Narrator: {narrator_script}")
+        story_context.append(narrator_script)
+
+        # ==========================================
+        # BUILD THE VIDEO
+        # ==========================================
         audio_path = f"videos/temp/audio_{p_idx}.mp3"
-        tts = gTTS(text=description, lang='en', slow=False)
+        tts = gTTS(text=narrator_script, lang='en', slow=False)
         tts.save(audio_path)
 
-        # Build Video
         video_path = f"videos/temp/video_{p_idx}.mp4"
         subprocess.run([
             "ffmpeg", "-loop", "1", "-y", 
