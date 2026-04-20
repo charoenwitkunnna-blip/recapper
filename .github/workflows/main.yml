@@ -39,11 +39,9 @@ jobs:
           seleniumbase install chromedriver
 
       - name: Run AI Scraper and Recapper
-        # Do NOT put xvfb-run here. SeleniumBase handles it now.
         run: |
           python recap.py
 
-      # THIS IS THE STEP THAT SAVES THE SCREENSHOT
       - name: Upload Debug Screenshot
         if: always() 
         uses: actions/upload-artifact@v4
@@ -51,11 +49,13 @@ jobs:
           name: debug-screenshot
           path: debug_screenshot.png
 
+      # FIXED: Added mkdir -p recaps so git never crashes
       - name: Commit and Push Recap
-        if: success()
+        if: always()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
+          mkdir -p recaps
           git add recaps/
           git commit -m "Auto-recap Infinite Mage Ch 122" || echo "No changes"
           git push
