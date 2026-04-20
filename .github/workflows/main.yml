@@ -31,31 +31,32 @@ jobs:
         with:
           python-version: '3.10'
 
+      # Added gTTS (Text-to-Speech) and explicitly install ffmpeg
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb
-          pip install seleniumbase requests
+          sudo apt-get install -y xvfb ffmpeg
+          pip install seleniumbase requests pillow gtts
           seleniumbase install chromedriver
 
-      - name: Run AI Scraper and Recapper
+      - name: Run AI Video Recapper
         run: |
           python recap.py
 
-      - name: Upload Debug Screenshot
+      # Upload the video so you can download it from GitHub
+      - name: Upload Video Artifact
         if: always() 
         uses: actions/upload-artifact@v4
         with:
-          name: debug-screenshot
-          path: debug_screenshot.png
+          name: recap-video
+          path: videos/
 
-      # FIXED: Added mkdir -p recaps so git never crashes
       - name: Commit and Push Recap
         if: always()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
-          mkdir -p recaps
-          git add recaps/
-          git commit -m "Auto-recap Infinite Mage Ch 122" || echo "No changes"
+          mkdir -p videos
+          git add videos/
+          git commit -m "Auto-generate Manhwa Recap Video" || echo "No changes"
           git push
