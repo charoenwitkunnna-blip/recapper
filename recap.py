@@ -9,7 +9,6 @@ from PIL import Image
 import requests
 from seleniumbase import SB
 
-# NEW: We use Google Gemini API for Vision & Scripting, and Edge-TTS for human-sounding audio!
 import google.generativeai as genai
 import edge_tts
 
@@ -23,8 +22,22 @@ if not GEMINI_API_KEY:
     exit(1)
 
 genai.configure(api_key=GEMINI_API_KEY)
-# We use Gemini 1.5 Flash: It's extremely fast, excellent at OCR, and free.
-model = genai.GenerativeModel('gemini-1.5-flash')
+
+# --- NEW AUTO-DETECT MODEL LOGIC ---
+# Google deprecates old models constantly. This finds the newest "flash" model automatically.
+available_models =[m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+if 'models/gemini-2.5-flash' in available_models:
+    MODEL_NAME = 'gemini-2.5-flash'
+elif 'models/gemini-2.0-flash' in available_models:
+    MODEL_NAME = 'gemini-2.0-flash'
+else:
+    # Fallback to whatever 'flash' model is active in your region
+    flash_models = [m for m in available_models if 'flash' in m]
+    MODEL_NAME = flash_models[0].replace('models/', '') if flash_models else 'gemini-2.5-flash'
+
+print(f"Using Google AI Model: {MODEL_NAME}")
+model = genai.GenerativeModel(MODEL_NAME)
+# -----------------------------------
 
 def split_into_panels(img):
     """OpenCV Panel Extractor (Optimized for Webtoons)"""
@@ -63,7 +76,6 @@ def split_into_panels(img):
 
 async def generate_audio(text, output_path):
     """Uses Edge-TTS for high-quality TikTok/Shorts style voices."""
-    # en-US-ChristopherNeural is a great dramatic male narrator voice
     communicate = edge_tts.Communicate(text, "en-US-ChristopherNeural")
     await communicate.save(output_path)
 
@@ -132,7 +144,7 @@ def main():
         # ==========================================
         # AI STEP: Vision + Script Generation via Gemini
         # ==========================================
-        print("     [Step 1] Asking Gemini to read panel and write script...")
+        print("[Step 1] Asking Gemini to read panel and write script...")
         recent_story = " ".join(story_context[-3:]) if story_context else "The story begins here."
         
         prompt = f"""You are a dramatic YouTube Shorts narrator for an epic manhwa.
@@ -149,7 +161,6 @@ CRITICAL RULES:
 """
         
         try:
-            # Gemini Native API Call (Takes ~2-4 seconds)
             response = model.generate_content([prompt, panel])
             narrator_script = response.text.replace("*", "").replace('"', '').strip()
         except Exception as e:
