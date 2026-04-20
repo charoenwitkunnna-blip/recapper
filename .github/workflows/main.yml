@@ -31,19 +31,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      # Added gTTS (Text-to-Speech) and explicitly install ffmpeg
+      # ADDED TESSERACT-OCR TO THE INSTALL LIST
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb ffmpeg
-          pip install seleniumbase requests pillow gtts
+          sudo apt-get install -y xvfb ffmpeg tesseract-ocr
+          pip install seleniumbase requests pillow gtts pytesseract
           seleniumbase install chromedriver
 
       - name: Run AI Video Recapper
         run: |
           python recap.py
 
-      # Upload the video so you can download it from GitHub
       - name: Upload Video Artifact
         if: always() 
         uses: actions/upload-artifact@v4
