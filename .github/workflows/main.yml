@@ -12,7 +12,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. CACHE OLLAMA MODELS
       - name: Cache Ollama Models
         id: ollama-cache
         uses: actions/cache@v4
@@ -32,7 +31,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      # 2. INSTALL UNDETECTED BROWSER & VIRTUAL SCREEN
       - name: Install System Dependencies
         run: |
           sudo apt-get update
@@ -40,12 +38,21 @@ jobs:
           pip install seleniumbase requests
           seleniumbase install chromedriver
 
-      # 3. RUN WITH VIRTUAL SCREEN (xvfb-run)
       - name: Run AI Scraper and Recapper
+        # Do NOT put xvfb-run here. SeleniumBase handles it now.
         run: |
-          xvfb-run python recap.py
+          python recap.py
+
+      # THIS IS THE STEP THAT SAVES THE SCREENSHOT
+      - name: Upload Debug Screenshot
+        if: always() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshot
+          path: debug_screenshot.png
 
       - name: Commit and Push Recap
+        if: success()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
