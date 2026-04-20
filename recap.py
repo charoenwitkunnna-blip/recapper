@@ -7,61 +7,59 @@ import requests
 import os
 import time
 import subprocess
+import cv2  
+import numpy as np  
 
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
 
-def split_into_panels(img, min_gap=30):
-    gray = img.convert("L")
-    width, height = gray.size
-    pixels = gray.load()
+def split_into_panels(img):
+    """
+    OpenCV Panel Extractor.
+    Finds the borders of the artwork and extracts them as clean bounding boxes.
+    """
+    open_cv_image = np.array(img)
+    img_bgr = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2BGR)
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     
-    is_bg_row =[]
-    # Identify solid background rows (white or black)
-    for y in range(height):
-        row_samples = [pixels[x, y] for x in range(0, width, 10)]
-        if not row_samples: 
-            is_bg_row.append(True)
-            continue
-        min_val, max_val = min(row_samples), max(row_samples)
-        is_solid_bg = (max_val - min_val < 15) and (min_val > 240 or max_val < 15)
-        is_bg_row.append(is_solid_bg)
+    # Threshold: turn artwork white, background black
+    _, thresh = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
+    
+    # Dilate: thicken the drawing so floating speech bubbles/explosions connect to the main panel
+    kernel = np.ones((15, 15), np.uint8)
+    dilated = cv2.dilate(thresh, kernel, iterations=4)
+    
+    # Find contours (invisible borders)
+    contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    bounding_boxes =[]
+    
+    for cnt in contours:
+        x, y, w, h = cv2.boundingRect(cnt)
+        # Filter out tiny background noise/glitches
+        if w > img.width * 0.05 and h > 100:
+            bounding_boxes.append((x, y, w, h))
             
+    # Sort panels from top to bottom (reading order)
+    bounding_boxes = sorted(bounding_boxes, key=lambda b: b[1])
+    
     panels =[]
-    start_y = 0
-    
-    # Extract only the content, skipping the whitespace gaps completely
-    while start_y < height:
-        if is_bg_row[start_y]:
-            start_y += 1
-            continue
-            
-        end_y = start_y + 1
-        current_gap = 0
+    for bbox in bounding_boxes:
+        x, y, w, h = bbox
         
-        while end_y < height:
-            if is_bg_row[end_y]:
-                current_gap += 1
-            else:
-                current_gap = 0 
-                
-            # If we hit exactly 30px of whitespace, panel ends!
-            if current_gap >= min_gap:
-                break
-            end_y += 1
-            
-        panel_end = end_y - current_gap
+        # Add a tiny 10-pixel safety margin around the extracted panel
+        x1 = max(0, x - 10)
+        y1 = max(0, y - 10)
+        x2 = min(img.width, x + w + 10)
+        y2 = min(img.height, y + h + 10)
         
-        if panel_end - start_y > 50: # Ignore tiny noise artifacts
-            panel = img.crop((0, start_y, width, panel_end))
-            
-            # If the panel is still extremely tall, split it in half
-            if panel.height > 2500:
-                panels.append(panel.crop((0, 0, panel.width, panel.height//2)))
-                panels.append(panel.crop((0, panel.height//2, panel.width, panel.height)))
-            else:
-                panels.append(panel)
-            
-        start_y = end_y
+        panel = img.crop((x1, y1, x2, y2))
+        
+        # If the panel is massive (a long vertical action scene), split it in half
+        if panel.height > 2500:
+            panels.append(panel.crop((0, 0, panel.width, panel.height//2)))
+            panels.append(panel.crop((0, panel.height//2, panel.width, panel.height)))
+        else:
+            panels.append(panel)
         
     return panels if panels else [img]
 
@@ -102,7 +100,7 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 
-video_files =[]
+video_files = []
 story_context =[]
 
 for idx, img_url in enumerate(image_urls):
@@ -115,8 +113,9 @@ for idx, img_url in enumerate(image_urls):
     if img_response.status_code != 200: continue
 
     image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
-    panels = split_into_panels(image, min_gap=30)
-    print(f"Strip sliced into {len(panels)} clean panels.")
+    
+    panels = split_into_panels(image)
+    print(f"Strip sliced into {len(panels)} clean bounding-box panels.")
     
     for p_idx, panel in enumerate(panels):
         print(f"\n  -> Processing Panel {p_idx+1}/{len(panels)}...")
@@ -140,51 +139,63 @@ for idx, img_url in enumerate(image_urls):
         encoded_string = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
         # ==========================================
-        # AI STEP 1: OBJECTIVE IMAGE DESCRIPTION (Moondream)
+        # AI STEP 1: OBJECTIVE IMAGE DESCRIPTION
         # ==========================================
         print("     [Step 1] Analyzing image visuals...")
         payload_1 = {
             "model": "moondream",
-            "prompt": "Analyze this comic panel. Describe exactly what the characters look like, their facial expressions, and the action they are performing. Be highly detailed. Do not tell a story.",
-            "images":[encoded_string],
+            "prompt": "Analyze this comic panel. Describe exactly what the characters look like, their facial expressions, any text/dialogue you can read, and the action they are performing. Be highly detailed. Do not tell a story.",
+            "images": [encoded_string],
             "stream": False
         }
         
-        res_1 = requests.post("http://localhost:11434/api/generate", json=payload_1, timeout=120)
-        raw_visuals = res_1.json().get('response', '').strip()
+        try:
+            res_1 = requests.post("http://localhost:11434/api/generate", json=payload_1, timeout=120)
+            raw_visuals = res_1.json().get('response', '').strip()
+        except Exception as e:
+            print(f"     [!] AI Timeout or Error. Skipping panel.")
+            continue
 
         if "[" in raw_visuals or "]" in raw_visuals or len(raw_visuals) < 10:
-            print("[!] AI failed visual analysis. Skipping panel.")
+            print("     [!] AI failed visual analysis. Skipping panel.")
             continue
 
         # ==========================================
-        # AI STEP 2: STORY NARRATOR (Llama 3.2 - Text LLM)
+        # AI STEP 2: STORY NARRATOR 
         # ==========================================
         print("     [Step 2] Writing narrator script...")
-        recent_story = " ".join(story_context[-2:]) if story_context else "The story begins here."
+        recent_story = " ".join(story_context[-3:]) if story_context else "The story begins here."
         
         script_prompt = f"""You are a dramatic YouTube Shorts narrator for an epic manhwa.
-Previous story events: {recent_story}
+Pasted below is a summary of the story up to this point, just to give you some context:
+{recent_story}
 
-Visual observation of the next scene: "{raw_visuals}"
+Visual observation of the next panel directly out of the manga: "{raw_visuals}"
 
-Write exactly ONE punchy, engaging sentence narrating what happens next in the story based ONLY on the visual observation.
+Your job is to continue the story where it left off in a compelling, storytelling tone using the new visual observation.
+I don't want you to invent new things, just stick to the plot of what is happening in the visual observation provided without over-embellishing.
+If the characters are speaking, please strive to sprinkle in direct quotes from them during intense parts to enhance your storytelling.
+
 CRITICAL RULES:
-1. Do NOT use phrases like "The image shows", "In this panel", "The visual observation", or "The character".
-2. Describe the action directly (e.g., "A fiery blast erupts as he draws his blade!").
-3. If the observation just describes a logo, a title, or a blank page, reply EXACTLY with the word: SKIP
+1. Keep it SHORT and CONCISE. Write EXACTLY ONE punchy sentence!
+2. Do NOT use phrases like "The image shows", "In this panel", "The visual observation", or "The character".
+3. Describe the action directly as if reading a dramatic audiobook (e.g., "A fiery blast erupts as he shouts his final warning!").
+4. If the observation just describes a logo, a title, or a blank page, reply EXACTLY with the word: SKIP
 """
 
         payload_2 = {
-            "model": "llama3.2", # Swapped to Llama 3.2 for the text logic!
+            "model": "llama3.2",
             "prompt": script_prompt,
             "stream": False
         }
         
-        res_2 = requests.post("http://localhost:11434/api/generate", json=payload_2, timeout=120)
-        narrator_script = res_2.json().get('response', '').strip()
+        try:
+            res_2 = requests.post("http://localhost:11434/api/generate", json=payload_2, timeout=120)
+            narrator_script = res_2.json().get('response', '').strip()
+        except Exception as e:
+            print(f"     [!] AI Timeout or Error. Skipping panel.")
+            continue
 
-        # Clean text and filter skips
         narrator_script = narrator_script.replace("*", "").replace('"', '').strip()
         
         if "SKIP" in narrator_script.upper() or len(narrator_script) < 15:
