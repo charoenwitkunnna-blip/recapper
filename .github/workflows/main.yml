@@ -25,6 +25,7 @@ jobs:
           ollama serve &
           sleep 5
           ollama pull moondream
+          ollama pull llama3.2 # Pulling Llama 3.2 for Step 2!
 
       - name: Set up Python
         uses: actions/setup-python@v4
