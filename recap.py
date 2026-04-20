@@ -14,8 +14,7 @@ CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
 
 def split_into_panels(img):
     """
-    OpenCV Panel Extractor.
-    Finds the borders of the artwork and extracts them as clean bounding boxes.
+    OpenCV Panel Extractor (Upgraded for Webtoons).
     """
     open_cv_image = np.array(img)
     img_bgr = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2BGR)
@@ -24,37 +23,34 @@ def split_into_panels(img):
     # Threshold: turn artwork white, background black
     _, thresh = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
     
-    # Dilate: thicken the drawing so floating speech bubbles/explosions connect to the main panel
-    kernel = np.ones((15, 15), np.uint8)
-    dilated = cv2.dilate(thresh, kernel, iterations=4)
+    # UPGRADE: We use a massive 30x30 kernel and 5 iterations!
+    # Manhwa has floating speech bubbles. This ensures floating text 
+    # connects to the character's bounding box and doesn't get chopped in half.
+    kernel = np.ones((30, 30), np.uint8)
+    dilated = cv2.dilate(thresh, kernel, iterations=5)
     
-    # Find contours (invisible borders)
     contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     bounding_boxes =[]
-    
     for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
-        # Filter out tiny background noise/glitches
-        if w > img.width * 0.05 and h > 100:
+        if w > img.width * 0.10 and h > 150: # Filter out noise
             bounding_boxes.append((x, y, w, h))
             
-    # Sort panels from top to bottom (reading order)
     bounding_boxes = sorted(bounding_boxes, key=lambda b: b[1])
     
     panels =[]
     for bbox in bounding_boxes:
         x, y, w, h = bbox
         
-        # Add a tiny 10-pixel safety margin around the extracted panel
-        x1 = max(0, x - 10)
-        y1 = max(0, y - 10)
-        x2 = min(img.width, x + w + 10)
-        y2 = min(img.height, y + h + 10)
+        # Add a 20-pixel safety margin so we don't clip text bubble edges
+        x1 = max(0, x - 20)
+        y1 = max(0, y - 20)
+        x2 = min(img.width, x + w + 20)
+        y2 = min(img.height, y + h + 20)
         
         panel = img.crop((x1, y1, x2, y2))
         
-        # If the panel is massive (a long vertical action scene), split it in half
         if panel.height > 2500:
             panels.append(panel.crop((0, 0, panel.width, panel.height//2)))
             panels.append(panel.crop((0, panel.height//2, panel.width, panel.height)))
@@ -115,7 +111,7 @@ for idx, img_url in enumerate(image_urls):
     image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
     
     panels = split_into_panels(image)
-    print(f"Strip sliced into {len(panels)} clean bounding-box panels.")
+    print(f"Strip sliced into {len(panels)} clean panels.")
     
     for p_idx, panel in enumerate(panels):
         print(f"\n  -> Processing Panel {p_idx+1}/{len(panels)}...")
@@ -139,13 +135,20 @@ for idx, img_url in enumerate(image_urls):
         encoded_string = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
         # ==========================================
-        # AI STEP 1: OBJECTIVE IMAGE DESCRIPTION
+        # AI STEP 1: VISION & OCR (Using Qwen2.5-VL!)
         # ==========================================
-        print("     [Step 1] Analyzing image visuals...")
+        print("[Step 1] Reading image with Qwen2.5-VL...")
+        
+        vision_prompt = """You are an expert manga and webtoon translator. Carefully analyze this image panel. 
+1. Read and transcribe EVERY word of text, dialogue, or sound effect you see. 
+2. Describe the characters, their facial expressions, and exact actions. 
+3. Describe any magical effects, weapons, or backgrounds. 
+Be highly detailed and objective. Do not invent a story, just describe what is visually present."""
+
         payload_1 = {
-            "model": "moondream",
-            "prompt": "Analyze this comic panel. Describe exactly what the characters look like, their facial expressions, any text/dialogue you can read, and the action they are performing. Be highly detailed. Do not tell a story.",
-            "images": [encoded_string],
+            "model": "qwen2.5vl:3b", # Massive upgrade from Moondream!
+            "prompt": vision_prompt,
+            "images":[encoded_string],
             "stream": False
         }
         
@@ -156,30 +159,29 @@ for idx, img_url in enumerate(image_urls):
             print(f"     [!] AI Timeout or Error. Skipping panel.")
             continue
 
-        if "[" in raw_visuals or "]" in raw_visuals or len(raw_visuals) < 10:
-            print("     [!] AI failed visual analysis. Skipping panel.")
+        if len(raw_visuals) < 10:
+            print("[!] AI failed visual analysis. Skipping panel.")
             continue
 
         # ==========================================
-        # AI STEP 2: STORY NARRATOR 
+        # AI STEP 2: NARRATOR WRITER (Using Llama 3.2)
         # ==========================================
         print("     [Step 2] Writing narrator script...")
         recent_story = " ".join(story_context[-3:]) if story_context else "The story begins here."
         
         script_prompt = f"""You are a dramatic YouTube Shorts narrator for an epic manhwa.
-Pasted below is a summary of the story up to this point, just to give you some context:
+Pasted below is a summary of the story up to this point:
 {recent_story}
 
-Visual observation of the next panel directly out of the manga: "{raw_visuals}"
+Visual observation and OCR text of the next panel: "{raw_visuals}"
 
 Your job is to continue the story where it left off in a compelling, storytelling tone using the new visual observation.
-I don't want you to invent new things, just stick to the plot of what is happening in the visual observation provided without over-embellishing.
-If the characters are speaking, please strive to sprinkle in direct quotes from them during intense parts to enhance your storytelling.
+If the characters are speaking in the OCR text, sprinkle in direct quotes from them during intense parts to enhance your storytelling.
 
 CRITICAL RULES:
 1. Keep it SHORT and CONCISE. Write EXACTLY ONE punchy sentence!
 2. Do NOT use phrases like "The image shows", "In this panel", "The visual observation", or "The character".
-3. Describe the action directly as if reading a dramatic audiobook (e.g., "A fiery blast erupts as he shouts his final warning!").
+3. Describe the action directly (e.g., "A fiery blast erupts as he shouts, 'Die!'").
 4. If the observation just describes a logo, a title, or a blank page, reply EXACTLY with the word: SKIP
 """
 
