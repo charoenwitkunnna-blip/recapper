@@ -25,7 +25,6 @@ jobs:
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve &
           sleep 5
-          # If the cache hit, this takes 1 second. If not, it downloads.
           ollama pull moondream
 
       - name: Set up Python
@@ -33,23 +32,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      # 2. INSTALL PLAYWRIGHT
-      - name: Install Python dependencies
+      # 2. INSTALL UNDETECTED BROWSER & VIRTUAL SCREEN
+      - name: Install System Dependencies
         run: |
-          pip install requests playwright
-          playwright install chromium
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          pip install seleniumbase requests
+          seleniumbase install chromedriver
 
+      # 3. RUN WITH VIRTUAL SCREEN (xvfb-run)
       - name: Run AI Scraper and Recapper
         run: |
-          python recap.py
-
-      # 3. UPLOAD SCREENSHOT SO YOU CAN SEE WHAT FAILED
-      - name: Upload Debug Screenshot
-        if: always() # This ensures the screenshot uploads even if the python script crashes
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-screenshot
-          path: debug_screenshot.png
+          xvfb-run python recap.py
 
       - name: Commit and Push Recap
         run: |
