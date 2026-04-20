@@ -1,0 +1,42 @@
+name: Local AI Manhwa Recapper
+on: 
+  workflow_dispatch: 
+
+permissions:
+  contents: write
+
+jobs:
+  run-local-ai:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install and Start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve &
+          sleep 5
+          ollama pull moondream
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # INSTALL THE NEW SCRAPING LIBRARIES HERE
+      - name: Install Python dependencies
+        run: |
+          pip install requests cloudscraper beautifulsoup4
+
+      - name: Run AI Scraper and Recapper
+        run: |
+          python recap.py
+
+      - name: Commit and Push Recap
+        run: |
+          git config --global user.name "AI Recapper Bot"
+          git config --global user.email "bot@github.com"
+          git add recaps/
+          git commit -m "Auto-recap Infinite Mage Ch 122" || echo "No changes"
+          git push
