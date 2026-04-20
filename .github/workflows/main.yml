@@ -17,14 +17,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama/models
-          key: ollama-moondream-llama32-v1
+          key: ollama-qwen-llama-v1
 
       - name: Install and Start Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve &
-          sleep 5
-          ollama pull moondream
+          sleep 10
+          ollama pull qwen2.5vl:3b
           ollama pull llama3.2
 
       - name: Set up Python
