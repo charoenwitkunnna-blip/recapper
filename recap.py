@@ -8,35 +8,29 @@ CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
 
 print(f"Loading: {CHAPTER_URL}")
 image_urls =[]
+site_cookies = {}
 
 # 1. Launch Undetected Browser with Virtual Display
 with SB(uc=True, xvfb=True, locale_code="en") as sb:
-    
-    # Temporarily disconnects WebDriver from Chrome to bypass initial CF detection
     sb.uc_open_with_reconnect(CHAPTER_URL, reconnect_time=6)
-    
     print("Checking for Cloudflare protection...")
     
-    # 2. Redirect / Verification Countermeasure
     try:
         sb.uc_gui_click_captcha()
-        print("Captcha clicked. Waiting for resolution...")
     except Exception:
         pass 
         
     print("Waiting for Cloudflare redirect to finish (up to 30s)...")
     
-    # Wait for the actual manga images class to load into the HTML
     try:
         sb.wait_for_element(".wp-manga-chapter-img", timeout=30)
         print("Successfully bypassed Cloudflare! Manga page is loading.")
     except Exception:
         print("CRITICAL: Timed out waiting for Cloudflare redirect.")
         sb.save_screenshot("debug_screenshot.png")
-        print("Check 'debug_screenshot.png' in GitHub Artifacts to see what went wrong.")
         exit(1)
 
-    # 3. Trigger Lazy Loading
+    # 2. Trigger Lazy Loading
     print("Scrolling down to trigger lazy-loaded images...")
     sb.execute_script("window.scrollTo(0, document.body.scrollHeight/4);")
     time.sleep(2)
@@ -44,27 +38,28 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
     time.sleep(2)
     sb.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(2)
-
-    # Take a screenshot to prove we made it to the chapter!
+    
     sb.save_screenshot("debug_screenshot.png")
 
-    # 4. Extract Image URLs
+    # 3. Extract Image URLs and Cloudflare Cookies!
     images = sb.find_elements("css selector", ".wp-manga-chapter-img")
-    
     for img in images:
+        # Prioritize data-src, fallback to src
         src = img.get_attribute("data-src") or img.get_attribute("src")
-        if src:
+        if src and "http" in src:
             image_urls.append(src.strip())
             
     print(f"Found {len(image_urls)} images.")
-
-# AT THIS POINT THE BROWSER CLOSES TO FREE RAM FOR THE AI
+    
+    # Grab the clearance cookies so we can download the images without getting blocked
+    for cookie in sb.driver.get_cookies():
+        site_cookies[cookie['name']] = cookie['value']
 
 if len(image_urls) == 0:
     print("Failed to find image URLs even after redirect.")
     exit(1)
 
-# 5. Process Images with Local AI (Ollama)
+# 4. Process Images with Local AI (Ollama)
 target_indices =[0, 1, 2, len(image_urls)//2, len(image_urls)-3, len(image_urls)-2, len(image_urls)-1]
 scene_descriptions =[]
 
@@ -77,10 +72,12 @@ for idx in target_indices:
     if idx >= len(image_urls): continue
     
     img_url = image_urls[idx]
-    print(f"Downloading image {idx+1}/{len(image_urls)}...")
+    print(f"Downloading image {idx+1}/{len(image_urls)}: {img_url}")
     
     try:
-        img_response = requests.get(img_url, headers=headers)
+        # Pass the cookies to bypass hotlink protection
+        img_response = requests.get(img_url, headers=headers, cookies=site_cookies)
+        
         if img_response.status_code != 200:
             print(f"Failed to download image {idx+1}. Status: {img_response.status_code}")
             continue
@@ -106,17 +103,16 @@ for idx in target_indices:
     except Exception as e:
         print(f"Error processing image {idx+1}: {e}")
 
-# 6. Save the Recap to your Repo
-if scene_descriptions:
-    print("Combining scenes into final recap...")
-    final_recap = "\n".join(scene_descriptions)
+# 5. Save the Recap to your Repo
+os.makedirs("recaps", exist_ok=True)
+filename = "recaps/infinite_mage_chapter_122.md"
 
-    os.makedirs("recaps", exist_ok=True)
-    filename = "recaps/infinite_mage_chapter_122.md"
-
-    with open(filename, "w") as f:
-        f.write(f"# Infinite Mage - Chapter 122 Recap\n\n")
+with open(filename, "w") as f:
+    f.write(f"# Infinite Mage - Chapter 122 Recap\n\n")
+    if scene_descriptions:
         f.write(f"### Scene Breakdown:\n")
-        f.write(final_recap)
+        f.write("\n".join(scene_descriptions))
+    else:
+        f.write("*Failed to process images with AI. Check GitHub Actions logs for specific download errors.*")
 
-    print(f"Success! Saved to {filename}")
+print(f"Success! Saved to {filename}")
