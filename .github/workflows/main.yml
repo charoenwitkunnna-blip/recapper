@@ -17,15 +17,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama/models
-          key: ollama-gemma3-4b
+          key: ollama-llava-llama3.2
 
       - name: Install and Start Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve &
           sleep 5
-          # Pulling Google's highly efficient Gemma 3 Multimodal model
-          ollama pull gemma3:4b
+          
+          # Pull the Vision Model (The Eyes)
+          ollama pull llava:7b
+          
+          # Pull the Memory/Writer Model (The Brain)
+          ollama pull llama3.2
 
       - name: Set up Python
         uses: actions/setup-python@v4
