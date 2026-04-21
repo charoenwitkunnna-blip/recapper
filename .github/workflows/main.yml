@@ -17,15 +17,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama/models
-          key: ollama-moondream-llama3-3b
+          key: ollama-google-paligemma
 
       - name: Install and Start Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve &
           sleep 5
-          ollama pull moondream   
-          ollama pull llama3.2     # <-- UPGRADED: 3B parameter model, much smarter
+          # Pulling Google's Gemma Vision model (replaces both Moondream and Llama!)
+          ollama pull paligemma
 
       - name: Set up Python
         uses: actions/setup-python@v4
