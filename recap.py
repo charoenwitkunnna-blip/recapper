@@ -125,7 +125,7 @@ for idx, img_url in enumerate(image_urls):
                 "prompt": gemma_prompt, 
                 "images": [encoded_string],
                 "stream": False
-            }, timeout=90)
+            }, timeout=300)
             narrator_script = res.json().get('response', '').strip()
         except: 
             print("     [!] AI failed. Skipping.")
