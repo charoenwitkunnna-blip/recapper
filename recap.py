@@ -70,7 +70,7 @@ if not image_urls: exit(1)
 
 os.makedirs("videos/temp", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
-video_files, story_context = [],[]
+video_files, story_context =[],[]
 
 for idx, img_url in enumerate(image_urls):
     if idx > 0: break # Process only first strip for testing
@@ -101,7 +101,7 @@ for idx, img_url in enumerate(image_urls):
         ocr_text = " ".join([w for w in ocr_text.split() if len(w) > 1])
         if ocr_text: print(f"     [OCR] Found dialogue: {ocr_text}")
         
-        # STEP 2: GOOGLE GEMINA (VISION + WRITER ALL IN ONE)
+        # STEP 2: GOOGLE GEMMA 3 (VISION + WRITER ALL IN ONE)
         recent_story = " ".join(story_context[-2:]) if story_context else "The story just began."
         
         gemma_prompt = f"""You are a strict, factual narrator recapping a Manhwa. Look at this image. 
@@ -119,9 +119,9 @@ for idx, img_url in enumerate(image_urls):
         """
 
         try:
-            # We are querying the Google multimodal model now!
+            # Pointing to the new Gemma 3 model
             res = requests.post("http://localhost:11434/api/generate", json={
-                "model": "paligemma", # Google's Vision-Language Gemma model
+                "model": "gemma3:4b", 
                 "prompt": gemma_prompt, 
                 "images": [encoded_string],
                 "stream": False
