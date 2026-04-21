@@ -1,4 +1,4 @@
-name: Local AI Manhwa Recapper
+name: AI Manhwa Recapper
 on:
   workflow_dispatch:
 
@@ -6,25 +6,11 @@ permissions:
   contents: write
 
 jobs:
-  run-local-ai:
+  run-ai-recapper:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Cache Ollama Models
-        id: ollama-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.ollama/models
-          key: ollama-minicpm-v-only
-
-      - name: Install and Start Ollama
-        run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-          sleep 10
-          # Pulling the single, powerful multimodal model for Director + Writer
-          ollama pull minicpm-v
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -34,12 +20,17 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb ffmpeg
-          # No Tesseract needed anymore! AI handles OCR natively.
-          pip install seleniumbase requests pillow gtts
+          # xvfb is for Selenium, ffmpeg for video, espeak-ng is required by Kokoro-TTS
+          sudo apt-get install -y xvfb ffmpeg espeak-ng
+
+      - name: Install Python Dependencies
+        run: |
+          pip install seleniumbase requests pillow numpy soundfile kokoro-onnx
           seleniumbase install chromedriver
 
       - name: Run AI Video Recapper
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python recap.py
 
@@ -48,14 +39,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: recap-video
-          path: videos/
+          path: videos/final_recap.mp4
 
-      - name: Commit and Push Recap
+      - name: Commit and Push Video
         if: always()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
-          mkdir -p videos
+          git pull origin main
           git add videos/
           git commit -m "Auto-generate Manhwa Recap Video" || echo "No changes"
           git push
