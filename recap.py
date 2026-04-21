@@ -15,12 +15,22 @@ from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
+# --- API KEY ROTATION SETUP ---
+# Put all your keys here. It will cycle through them if it hits a rate limit.
+GEMINI_API_KEYS =[
+    os.environ.get("GEMINI_API_KEY_1", "YOUR_API_KEY_1_HERE"),
+    os.environ.get("GEMINI_API_KEY_2", "YOUR_API_KEY_2_HERE"),
+    os.environ.get("GEMINI_API_KEY_3", "YOUR_API_KEY_3_HERE")
+]
+# Filter out empty strings
+GEMINI_API_KEYS =[k for k in GEMINI_API_KEYS if k and k != "YOUR_API_KEY_1_HERE" and "YOUR_API_KEY" not in k]
+
 VOICE_MODEL = "am_adam"
 AUDIO_SPEED = 1.25
 
-if not GEMINI_API_KEY:
-    print("ERROR: GEMINI_API_KEY environment variable not set.")
+if not GEMINI_API_KEYS:
+    print("ERROR: No GEMINI API KEYS provided. Please add them to the GEMINI_API_KEYS list.")
     exit(1)
 # =================================================
 
@@ -47,20 +57,23 @@ if not image_urls:
     print("Failed to find images.")
     exit(1)
 
+# Directories setup
 os.makedirs("videos/temp", exist_ok=True)
 os.makedirs("videos/raw_strips", exist_ok=True)
+os.makedirs("characters", exist_ok=True) # --- NEW FOLDER FOR CHARACTERS ---
+
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
 font_path = "Roboto-Black.ttf"
 if not os.path.exists(font_path):
     urllib.request.urlretrieve("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Black.ttf", font_path)
-font = ImageFont.truetype(font_path, 28) # Perfectly sized for the ruler
+font = ImageFont.truetype(font_path, 28)
 
 print(f"[2] Drawing Super Rulers on {len(image_urls)} Strips for the AI Editor...")
 
 parts =[]
 original_files = {} 
-ai_heights = {} # We need to remember how tall the AI image was to scale the crop back up!
+ai_heights = {} 
 
 for idx, img_url in enumerate(image_urls): 
     try:
@@ -73,28 +86,20 @@ for idx, img_url in enumerate(image_urls):
         image.save(raw_path, format="JPEG", quality=95)
         original_files[idx] = raw_path
         
-        # Scale for AI
         ai_img = image.copy()
         ai_img.thumbnail((800, 40000), Image.Resampling.LANCZOS) 
         ai_w, ai_h = ai_img.size
         ai_heights[idx] = ai_h 
         
         draw = ImageDraw.Draw(ai_img, 'RGBA')
-        
-        # Draw a dark background bar so the ruler is highly readable
         draw.rectangle([(0, 0), (70, ai_h)], fill=(0, 0, 0, 220))
         
-        # === THE SUPER RULER LOGIC ===
-        # Every 100 pixels equals "10 units" on the ruler (0, 10, 20, 30...)
         step = 100 
         for y in range(0, ai_h, step):
             mark_value = y // 10 
-            
-            # Draw Major Tick & Number
             draw.line([(0, y), (35, y)], fill=(255, 255, 255, 255), width=4)
             draw.text((40, y - 15), str(mark_value), fill=(255, 255, 0, 255), font=font)
             
-            # Draw Minor Ticks (Every 2 units / 20 pixels)
             for minor_y in range(y + 20, y + 100, 20):
                 if minor_y < ai_h:
                     draw.line([(0, minor_y), (15, minor_y)], fill=(255, 255, 255, 150), width=2)
@@ -110,50 +115,64 @@ for idx, img_url in enumerate(image_urls):
         print(f"Error processing image {idx}: {e}")
 
 print(f"[+] Successfully prepared Super Rulers.")
-print("[3] Asking AI to Crop Panels & Script the Recap (JSON Response)...")
+print("[3] Asking AI to Profile Characters, Crop Panels & Script the Recap...")
 
-prompt_text = """You are a professional YouTube Shorts Manhwa recap Director.
+# --- UPDATED PROMPT INTEGRATING YOUR EXACT SCRIPTWRITER RULES ---
+prompt_text = """You are a professional scriptwriter and highly successful YouTube Shorts Manhwa recap Director.
 I have provided you with chronological Manhwa strips. On the left side of EVERY image is a Super Ruler.
-The large numbers mark units like 0, 10, 20, 30. There are smaller tick marks in between them.
 
-YOUR TASK:
-1. Select the most action-packed and story-relevant panels. Skip boring filler.
-2. For each panel you select, look at the ruler to determine exactly where the panel starts and ends. 
-3. Be incredibly precise! If a panel starts exactly on the 30 mark and ends midway between 60 and 70, you should write start_mark: 30, end_mark: 65.
-4. Give a tiny bit of padding so you don't chop off heads or dialogue bubbles.
-5. Write a fast-paced, high-energy narration for that exact panel.
+STRICT NARRATION RULES:
+1. NO MARKDOWN: You are strictly forbidden from using Markdown formatting in the narration. Output ONLY plain text. No asterisks, bolding, italics, hash symbols, or bullet points.
+2. BE EXTREMELY DETAILED: Walk through the chapter chronologically. Do not gloss over the middle. Capture every major plot beat, fight sequence, magic spell, inner thought, and lore reveal step-by-step.
+3. YOUTUBE RECAP VOCABULARY: Use high-energy, dynamic, and modern recap language. Inject action-packed verbs and slang like "blitzes", "speedblitzes", "tanks the hit", "flexes his aura", "drops a bombshell", "absolute menace", "absolute unit", or "OP". Tell the story as if you are passionately explaining an awesome manhwa.
+4. BAN ON REPETITIVE NAMING ("OUR MC"): You are STRICTLY FORBIDDEN from using the phrase "our MC" more than ONCE in the entire script. You must constantly rotate how you address the main character. Use their actual name, pronouns, or creative aliases.
+5. ADVANCED TRANSITIONS: Do not start sentences with basic words like "Then", "Suddenly", "After that", or "But". Use fluid, engaging transitions (e.g., "Without hesitation," "Refusing to back down," "Cutting through the tension," "Moments later," "Against all odds,").
+6. PARAPHRASE DIALOGUE & THOUGHTS: Do not use standard dialogue formatting or quote marks. Weave spoken words and inner monologues directly into the narrative.
+7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
+8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe (e.g., "the suit-wearing guard", "the arrogant noble").
+
+YOUR TASKS:
+1. Identify Characters: Document the name (or descriptive title) and physical appearance of any significant character shown.
+2. Select Panels: Choose the most action-packed and story-relevant panels. Skip filler. Look at the ruler to determine exactly where the panel starts and ends (with slight padding).
+3. Script: Write the fast-paced narration for that exact panel following the STRICT NARRATION RULES.
 
 OUTPUT FORMAT:
-You MUST return a pure JSON array of objects.[
-  {
-    "image_index": 0,
-    "start_mark": 12,
-    "end_mark": 46,
-    "narration": "The absolute menace drops from the sky, shattering the ground!"
-  },
-  {
-    "image_index": 1,
-    "start_mark": 100,
-    "end_mark": 135,
-    "narration": "Without hesitation, he flexes his aura and blitzes the enemy."
-  }
-]
+You MUST return a pure JSON object containing a "characters" array and a "panels" array. 
+{
+  "characters":[
+    {"name": "Shirone / The Young Mage", "appearance": "Silver hair, wears ragged commoner clothes, determined eyes"}
+  ],
+  "panels":[
+    {
+      "image_index": 0,
+      "start_mark": 12,
+      "end_mark": 46,
+      "narration": "The absolute menace drops from the sky, shattering the ground!"
+    }
+  ]
+}
 """
 
 parts.insert(0, {"text": prompt_text})
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
 payload = {
     "contents": [{"parts": parts}],
     "generationConfig": {"responseMimeType": "application/json"}
 }
 
-max_retries = 3
+max_retries = 10
 retry_delay = 5 
 script_data = None
+current_key_idx = 0
 
+# --- API KEY ROTATION & RETRY LOGIC ---
 for attempt in range(max_retries):
+    api_key = GEMINI_API_KEYS[current_key_idx]
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+    
     try:
+        print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx}...")
         gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
+        
         if gemini_res.status_code == 200:
             gemini_data = gemini_res.json()
             if 'candidates' in gemini_data and 'content' in gemini_data['candidates'][0]:
@@ -163,20 +182,44 @@ for attempt in range(max_retries):
                     break 
                 except json.JSONDecodeError:
                     print(f"Failed to parse AI JSON. Retrying...")
-        elif gemini_res.status_code in[503, 429]:
-            time.sleep(retry_delay * (2 ** attempt))
+                    
+        elif gemini_res.status_code in[429, 503]:
+            print(f"HTTP {gemini_res.status_code}: Rate limit or overloaded.")
+            # ROTATE KEY ON RATE LIMIT
+            current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
+            print(f"-> Switching to API Key {current_key_idx}...")
+            time.sleep(retry_delay)
             continue
         else:
             print(f"HTTP ERROR {gemini_res.status_code}: {gemini_res.text}")
-            exit(1)
+            # Switch keys on other failures too just in case it's a quota issue
+            current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
+            time.sleep(retry_delay)
+            
     except Exception as e:
-        time.sleep(retry_delay * (2 ** attempt))
+        print(f"Exception during request: {e}")
+        current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
+        time.sleep(retry_delay)
 
-if not script_data:
-    print("Failed to get valid JSON from Gemini.")
+if not script_data or "panels" not in script_data:
+    print("Failed to get valid JSON from Gemini after all retries.")
     exit(1)
 
-print(f"[+] AI Editor precision-mapped {len(script_data)} panels!")
+# --- EXTRACT & SAVE CHARACTER DATA ---
+characters = script_data.get("characters",[])
+panels = script_data.get("panels",[])
+
+if characters:
+    char_file_path = "characters/chapter_1_characters.txt"
+    with open(char_file_path, "w", encoding="utf-8") as cf:
+        cf.write("=== DETECTED CHARACTERS ===\n\n")
+        for char in characters:
+            cf.write(f"Name/Alias: {char.get('name', 'Unknown')}\n")
+            cf.write(f"Appearance: {char.get('appearance', 'No description provided')}\n")
+            cf.write("-" * 30 + "\n")
+    print(f"[+] Saved {len(characters)} character profiles to {char_file_path}")
+
+print(f"[+] AI Editor precision-mapped {len(panels)} panels!")
 print("[4] Framing Premium Video Scenes & Generating Audio...")
 
 if not os.path.exists("kokoro-v0_19.onnx"):
@@ -191,7 +234,7 @@ concat_lines =[]
 final_audio_pieces =[]
 TARGET_W, TARGET_H = 1080, 1920
 
-for i, block in enumerate(script_data):
+for i, block in enumerate(panels):
     img_idx = block.get("image_index")
     start_mark = block.get("start_mark", 0)
     end_mark = block.get("end_mark", 10)
@@ -203,27 +246,20 @@ for i, block in enumerate(script_data):
     try:
         raw_img = Image.open(original_files[img_idx])
         
-        # --- MATHEMATICAL CROPPING ---
-        # 1 unit on the ruler = 10 pixels on the AI image. 
         ai_h = ai_heights[img_idx]
         scale_factor = raw_img.height / ai_h 
         
-        # Convert the AI's chosen marks back to the original massive 4k image
         top_px = int((start_mark * 10) * scale_factor)
         bottom_px = int((end_mark * 10) * scale_factor)
         
-        # Clamp bounds so it doesn't try to crop outside the image
         top_px = max(0, min(top_px, raw_img.height - 10))
         bottom_px = max(top_px + 10, min(bottom_px, raw_img.height))
         
         cropped_panel = raw_img.crop((0, top_px, raw_img.width, bottom_px))
         
-        # --- PREMIUM CINEMATIC FRAMING ---
-        # 1. Base Blurred Background
         bg = cropped_panel.resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
-        bg = bg.filter(ImageFilter.GaussianBlur(35)) # Smooth, heavy blur
+        bg = bg.filter(ImageFilter.GaussianBlur(35)) 
         
-        # 2. Fit the actual crisp panel in the center
         scale = min(TARGET_W / cropped_panel.width, TARGET_H / cropped_panel.height)
         new_w, new_h = int(cropped_panel.width * scale), int(cropped_panel.height * scale)
         panel_scaled = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
@@ -235,7 +271,7 @@ for i, block in enumerate(script_data):
         frame_path = f"videos/temp/final_frame_{i:04d}.jpg"
         bg.save(frame_path, format="JPEG", quality=95)
         
-        # --- GENERATE SYNCHRONIZED AUDIO ---
+        # Audio generation
         samples, sr = kokoro.create(narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
         final_audio_pieces.append(samples)
         
