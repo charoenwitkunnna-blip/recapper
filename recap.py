@@ -141,10 +141,10 @@ STRICT NARRATION RULES:
 2. BE EXTREMELY DETAILED: Walk through the chapter chronologically. Do not gloss over the middle. Capture every major plot beat, fight sequence, magic spell, inner thought, and lore reveal step-by-step.
 3. YOUTUBE RECAP VOCABULARY: Use high-energy, dynamic, and modern recap language. Inject action-packed verbs and slang like "blitzes", "speedblitzes", "tanks the hit", "flexes his aura", "drops a bombshell", "absolute menace", "absolute unit", or "OP". Tell the story as if you are passionately explaining an awesome manhwa.
 4. BAN ON REPETITIVE NAMING ("OUR MC"): You are STRICTLY FORBIDDEN from using the phrase "our MC" more than ONCE in the entire script. You must constantly rotate how you address the main character. Use their actual name, pronouns, or creative aliases.
-5. ADVANCED TRANSITIONS: Do not start sentences with basic words like "Then", "Suddenly", "After that", or "But". Use fluid, engaging transitions (e.g., "Without hesitation," "Refusing to back down," "Cutting through the tension," "Moments later," "Against all odds,").
+5. ADVANCED TRANSITIONS: Do not start sentences with basic words like "Then", "Suddenly", "After that", or "But". Use fluid, engaging transitions.
 6. PARAPHRASE DIALOGUE & THOUGHTS: Do not use standard dialogue formatting or quote marks. Weave spoken words and inner monologues directly into the narrative.
 7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
-8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe (e.g., "the suit-wearing guard", "the arrogant noble").
+8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe.
 
 YOUR TASKS:
 1. Identify Characters: Document the name (or descriptive title) and physical appearance of any significant character shown.
@@ -183,6 +183,7 @@ current_key_idx = 0
 for attempt in range(max_retries):
     api_key = GEMINI_API_KEYS[current_key_idx]
     
+    # --- UPDATED TO SPECIFICALLY USE gemini-flash-latest ---
     gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
     
     print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx} ({found_key_names[current_key_idx]})...")
@@ -278,33 +279,40 @@ for i, block in enumerate(panels):
         audio_path = f"videos/temp/audio_{i:04d}.wav"
         sf.write(audio_path, samples, sample_rate)
         
-        exact_duration = len(samples) / sample_rate
+        exact_duration = max(0.5, len(samples) / sample_rate) # Prevent duration from being too short
         frames = max(1, int(exact_duration * 30))
         
         aspect_ratio = cropped_panel.height / cropped_panel.width
         frame_path = f"videos/temp/panel_{i:04d}.jpg"
         scene_video_path = f"videos/temp/scene_{i:04d}.mp4"
         
-        # If the panel is tall/long, pan down smoothly
+        # --- 1. LONG PANEL DETECTED: PAN DOWN (SLIDE) EFFECT ---
         if aspect_ratio > 1.8:
-            print(f"   -> Scene {i:02d} | Long Panel Detected | Effect: Pan Down")
+            print(f"   -> Scene {i:02d} | Long Panel Detected | Effect: Cinematic Pan Down")
+            
+            # Format the input image to exactly 1080 width and whatever natural height scales out
             new_w = TARGET_W
             new_h = max(TARGET_H, int(TARGET_W * aspect_ratio))
             scaled_panel = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
             scaled_panel.save(frame_path, format="JPEG", quality=95)
             
+            # Use strict evaluation for FFmpeg crop sliding (No single quotes to break subprocess parsing)
             ffmpeg_cmd =[
-                "ffmpeg", "-y", "-loop", "1", "-t", f"{exact_duration:.4f}",
+                "ffmpeg", "-y", 
+                "-loop", "1", "-t", f"{exact_duration:.4f}",
                 "-i", frame_path, "-i", audio_path,
-                "-vf", f"crop=1080:1920:0:'(in_h-1920)*(t/{exact_duration})',format=yuv420p",
-                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "44100", 
+                "-map", "0:v", "-map", "1:a",
+                "-vf", f"crop=1080:1920:0:(in_h-1920)*(t/{exact_duration:.4f}),format=yuv420p",
+                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "24000", 
                 "-pix_fmt", "yuv420p", "-r", "30", "-shortest",
                 scene_video_path
             ]
             
-        # If it's normal sized, create the blur background and zoom in
+        # --- 2. NORMAL PANEL DETECTED: ZOOM IN EFFECT ---
         else:
-            print(f"   -> Scene {i:02d} | Normal Panel Detected | Effect: Zoom In")
+            print(f"   -> Scene {i:02d} | Normal Panel Detected | Effect: Smooth Zoom In")
+            
+            # Create a 1080x1920 padded blur background 
             bg = cropped_panel.resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
             bg = bg.filter(ImageFilter.GaussianBlur(35)) 
             
@@ -317,24 +325,27 @@ for i, block in enumerate(panels):
             bg.paste(panel_scaled, (x_offset, y_offset))
             bg.save(frame_path, format="JPEG", quality=95)
             
+            # Use `zoompan` for center zooming without sub-shell quoting conflicts
             ffmpeg_cmd =[
                 "ffmpeg", "-y", 
                 "-i", frame_path, "-i", audio_path,
-                "-vf", f"zoompan=z='min(1.0+0.0015*n,1.3)':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':d={frames}:s=1080x1920:fps=30,format=yuv420p",
-                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "44100", 
+                "-map", "0:v", "-map", "1:a",
+                "-vf", f"zoompan=z=zoom+0.0015:x=iw/2-(iw/zoom)/2:y=ih/2-(ih/zoom)/2:d={frames}:s=1080x1920:fps=30,format=yuv420p",
+                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "24000", 
                 "-pix_fmt", "yuv420p", "-shortest",
                 scene_video_path
             ]
             
-        # Execute Scene Render secretly so it doesn't flood console
-        subprocess.run(ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
-        if os.path.exists(scene_video_path):
+        # Execute Render and grab errors if any occur
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"   [!] FFmpeg Error on Scene {i}:\n{result.stderr}")
+        elif os.path.exists(scene_video_path):
             abs_scene_path = os.path.abspath(scene_video_path).replace('\\', '/')
             concat_lines.append(f"file '{abs_scene_path}'")
             
     except Exception as e:
-        print(f"Skipped Scene {i} due to Error: {e}")
+        print(f"Skipped Scene {i} due to Python Error: {e}")
 
 if not concat_lines:
     print("Error: No valid scenes generated.")
