@@ -1,5 +1,5 @@
 from seleniumbase import SB
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import io
 import base64
 import requests
@@ -48,20 +48,19 @@ if not image_urls:
     exit(1)
 
 os.makedirs("videos/temp", exist_ok=True)
+os.makedirs("videos/raw_strips", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
-# Download a Bold Font for the AI Overlay
 font_path = "Roboto-Black.ttf"
 if not os.path.exists(font_path):
     urllib.request.urlretrieve("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Black.ttf", font_path)
-font = ImageFont.truetype(font_path, 120)
+font = ImageFont.truetype(font_path, 28) # Perfectly sized for the ruler
 
-print(f"[2] Slicing Video Frames and Generating AI Overlay Strips...")
-TARGET_W, TARGET_H = 1080, 1920
+print(f"[2] Drawing Super Rulers on {len(image_urls)} Strips for the AI Editor...")
 
-panel_files = {}  # Map scene_id -> high res video frame
-parts =[]        # Payload array for Gemini
-scene_counter = 0
+parts =[]
+original_files = {} 
+ai_heights = {} # We need to remember how tall the AI image was to scale the crop back up!
 
 for idx, img_url in enumerate(image_urls): 
     try:
@@ -70,83 +69,79 @@ for idx, img_url in enumerate(image_urls):
 
         image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
         
-        # Scale strip width to perfectly fit video frame
-        scale = TARGET_W / image.width
-        new_h = int(image.height * scale)
-        video_img = image.resize((TARGET_W, new_h), Image.Resampling.LANCZOS)
+        raw_path = f"videos/raw_strips/strip_{idx}.jpg"
+        image.save(raw_path, format="JPEG", quality=95)
+        original_files[idx] = raw_path
         
-        # Create a copy to draw the AI overlay onto
-        ai_img = video_img.copy()
+        # Scale for AI
+        ai_img = image.copy()
+        ai_img.thumbnail((800, 40000), Image.Resampling.LANCZOS) 
+        ai_w, ai_h = ai_img.size
+        ai_heights[idx] = ai_h 
+        
         draw = ImageDraw.Draw(ai_img, 'RGBA')
         
-        current_y = 0
-        step = TARGET_H - 150 # 150px overlap for seamless transition
+        # Draw a dark background bar so the ruler is highly readable
+        draw.rectangle([(0, 0), (70, ai_h)], fill=(0, 0, 0, 220))
         
-        while current_y < new_h:
-            scene_id = f"{scene_counter:04d}"
+        # === THE SUPER RULER LOGIC ===
+        # Every 100 pixels equals "10 units" on the ruler (0, 10, 20, 30...)
+        step = 100 
+        for y in range(0, ai_h, step):
+            mark_value = y // 10 
             
-            # --- 1. Extract Clean Video Frame ---
-            box = (0, current_y, TARGET_W, min(current_y + TARGET_H, new_h))
-            slice_img = video_img.crop(box)
+            # Draw Major Tick & Number
+            draw.line([(0, y), (35, y)], fill=(255, 255, 255, 255), width=4)
+            draw.text((40, y - 15), str(mark_value), fill=(255, 255, 0, 255), font=font)
             
-            if slice_img.height < TARGET_H:
-                bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0))
-                bg.paste(slice_img, (0, 0))
-                slice_img = bg
-                
-            img_path = f"videos/temp/scene_{scene_id}.jpg"
-            slice_img.save(img_path, format="JPEG", quality=90)
-            panel_files[scene_id] = os.path.abspath(img_path).replace('\\', '/')
-            
-            # --- 2. Draw ID Overlay onto the AI Strip ---
-            # Red division line
-            draw.line([(0, current_y), (TARGET_W, current_y)], fill=(255, 0, 0, 255), width=12)
-            # Semi-transparent background box for readability
-            draw.rectangle([(0, current_y), (500, current_y + 150)], fill=(0, 0, 0, 220))
-            # Bright Yellow Text
-            draw.text((20, current_y + 15), f"ID: {scene_id}", fill=(255, 255, 0, 255), font=font)
-            
-            scene_counter += 1
-            current_y += step
-            
-        # --- 3. Compress and send the single overlayed strip to the AI ---
-        ai_img.thumbnail((720, 50000), Image.Resampling.LANCZOS) # Scale down width, keep height unlimited
+            # Draw Minor Ticks (Every 2 units / 20 pixels)
+            for minor_y in range(y + 20, y + 100, 20):
+                if minor_y < ai_h:
+                    draw.line([(0, minor_y), (15, minor_y)], fill=(255, 255, 255, 150), width=2)
+
         buffered = io.BytesIO()
-        ai_img.save(buffered, format="JPEG", quality=65)
+        ai_img.save(buffered, format="JPEG", quality=60)
         b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
         
+        parts.append({"text": f"Image Index: {idx}"})
         parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64}})
             
     except Exception as e:
         print(f"Error processing image {idx}: {e}")
 
-if not panel_files:
-    print("No images were successfully processed.")
-    exit(1)
+print(f"[+] Successfully prepared Super Rulers.")
+print("[3] Asking AI to Crop Panels & Script the Recap (JSON Response)...")
 
-print(f"[+] Processed {scene_counter} scenes across {len(parts)} AI Contact Strips.")
-print("[3] Asking AI to Edit & Script the Recap (JSON Response)...")
-
-prompt_text = """You are a professional YouTube Manhwa recap Director and Scriptwriter.
-I have provided you with the full Manhwa strips. I have drawn red lines to divide the strips into scenes, and stamped each scene with a highly visible ID (e.g., ID: 0000).
+prompt_text = """You are a professional YouTube Shorts Manhwa recap Director.
+I have provided you with chronological Manhwa strips. On the left side of EVERY image is a Super Ruler.
+The large numbers mark units like 0, 10, 20, 30. There are smaller tick marks in between them.
 
 YOUR TASK:
-1. Be the Editor: Select ONLY the IDs of the most visually exciting and story-relevant scenes.
-2. Cut the fat: COMPLETELY IGNORE (cut) IDs that show boring transitions, blank backgrounds, or filler. We will only show the images you select in the video.
-3. Be the Writer: For every ID you select, write an action-packed, high-energy narration script that perfectly matches the action inside that specific red boundary. 
-4. Don't use the phrase "our MC" more than once.
+1. Select the most action-packed and story-relevant panels. Skip boring filler.
+2. For each panel you select, look at the ruler to determine exactly where the panel starts and ends. 
+3. Be incredibly precise! If a panel starts exactly on the 30 mark and ends midway between 60 and 70, you should write start_mark: 30, end_mark: 65.
+4. Give a tiny bit of padding so you don't chop off heads or dialogue bubbles.
+5. Write a fast-paced, high-energy narration for that exact panel.
 
 OUTPUT FORMAT:
 You MUST return a pure JSON array of objects.[
-  {"id": "0000", "narration": "The absolute menace drops from the sky, shattering the ground!"},
-  {"id": "0003", "narration": "Without hesitation, he flexes his aura and blitzes the enemy."}
+  {
+    "image_index": 0,
+    "start_mark": 12,
+    "end_mark": 46,
+    "narration": "The absolute menace drops from the sky, shattering the ground!"
+  },
+  {
+    "image_index": 1,
+    "start_mark": 100,
+    "end_mark": 135,
+    "narration": "Without hesitation, he flexes his aura and blitzes the enemy."
+  }
 ]
 """
 
 parts.insert(0, {"text": prompt_text})
-
 gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
-
 payload = {
     "contents": [{"parts": parts}],
     "generationConfig": {"responseMimeType": "application/json"}
@@ -159,7 +154,6 @@ script_data = None
 for attempt in range(max_retries):
     try:
         gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
-        
         if gemini_res.status_code == 200:
             gemini_data = gemini_res.json()
             if 'candidates' in gemini_data and 'content' in gemini_data['candidates'][0]:
@@ -169,30 +163,21 @@ for attempt in range(max_retries):
                     break 
                 except json.JSONDecodeError:
                     print(f"Failed to parse AI JSON. Retrying...")
-            else:
-                print(f"Error in JSON structure: {gemini_data}")
-                exit(1)
-        elif gemini_res.status_code in [503, 429]:
-            wait_time = retry_delay * (2 ** attempt)
-            print(f"API Busy ({gemini_res.status_code}). Retrying in {wait_time}s...")
-            time.sleep(wait_time)
+        elif gemini_res.status_code in[503, 429]:
+            time.sleep(retry_delay * (2 ** attempt))
             continue
         else:
-            print(f"\n=== HTTP ERROR {gemini_res.status_code} ===")
-            print(gemini_res.text)
+            print(f"HTTP ERROR {gemini_res.status_code}: {gemini_res.text}")
             exit(1)
-
     except Exception as e:
-        wait_time = retry_delay * (2 ** attempt)
-        print(f"Connection Error: {e}. Retrying in {wait_time}s...")
-        time.sleep(wait_time)
+        time.sleep(retry_delay * (2 ** attempt))
 
 if not script_data:
-    print("Failed to get valid JSON from Gemini after 3 retries.")
+    print("Failed to get valid JSON from Gemini.")
     exit(1)
 
-print(f"[+] AI Editor chose {len(script_data)} crucial action scenes out of {scene_counter}.")
-print("[4] Generating Tightly-Packed Audio & Syncing Timing...")
+print(f"[+] AI Editor precision-mapped {len(script_data)} panels!")
+print("[4] Framing Premium Video Scenes & Generating Audio...")
 
 if not os.path.exists("kokoro-v0_19.onnx"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx", "kokoro-v0_19.onnx")
@@ -202,44 +187,72 @@ if not os.path.exists("voices.bin"):
 kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
 sample_rate = 24000
 
-concat_lines = []
+concat_lines =[]
 final_audio_pieces =[]
+TARGET_W, TARGET_H = 1080, 1920
 
-for block in script_data:
-    # Safely extract the ID in case the AI writes "ID: 0001" or "1" instead of "0001"
-    raw_id = str(block.get("id", ""))
-    match = re.search(r'\d+', raw_id)
-    if not match: continue
-    
-    clean_id = f"{int(match.group()):04d}"
+for i, block in enumerate(script_data):
+    img_idx = block.get("image_index")
+    start_mark = block.get("start_mark", 0)
+    end_mark = block.get("end_mark", 10)
     narration = block.get("narration", "").strip()
     
-    if not narration or clean_id not in panel_files:
-        continue 
-        
+    if img_idx not in original_files or not narration: continue
+    if end_mark <= start_mark: end_mark = start_mark + 10 
+    
     try:
-        # Generate the Audio 
-        samples, sr = kokoro.create(narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+        raw_img = Image.open(original_files[img_idx])
         
-        # PER REQUEST: No artificial pauses added here! Audio is tightly packed.
+        # --- MATHEMATICAL CROPPING ---
+        # 1 unit on the ruler = 10 pixels on the AI image. 
+        ai_h = ai_heights[img_idx]
+        scale_factor = raw_img.height / ai_h 
+        
+        # Convert the AI's chosen marks back to the original massive 4k image
+        top_px = int((start_mark * 10) * scale_factor)
+        bottom_px = int((end_mark * 10) * scale_factor)
+        
+        # Clamp bounds so it doesn't try to crop outside the image
+        top_px = max(0, min(top_px, raw_img.height - 10))
+        bottom_px = max(top_px + 10, min(bottom_px, raw_img.height))
+        
+        cropped_panel = raw_img.crop((0, top_px, raw_img.width, bottom_px))
+        
+        # --- PREMIUM CINEMATIC FRAMING ---
+        # 1. Base Blurred Background
+        bg = cropped_panel.resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
+        bg = bg.filter(ImageFilter.GaussianBlur(35)) # Smooth, heavy blur
+        
+        # 2. Fit the actual crisp panel in the center
+        scale = min(TARGET_W / cropped_panel.width, TARGET_H / cropped_panel.height)
+        new_w, new_h = int(cropped_panel.width * scale), int(cropped_panel.height * scale)
+        panel_scaled = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        
+        x_offset = (TARGET_W - new_w) // 2
+        y_offset = (TARGET_H - new_h) // 2
+        bg.paste(panel_scaled, (x_offset, y_offset))
+        
+        frame_path = f"videos/temp/final_frame_{i:04d}.jpg"
+        bg.save(frame_path, format="JPEG", quality=95)
+        
+        # --- GENERATE SYNCHRONIZED AUDIO ---
+        samples, sr = kokoro.create(narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
         final_audio_pieces.append(samples)
         
         exact_duration = len(samples) / sample_rate
+        abs_frame_path = os.path.abspath(frame_path).replace('\\', '/')
         
-        # Build the exact scene duration for the selected image
-        concat_lines.append(f"file '{panel_files[clean_id]}'")
+        concat_lines.append(f"file '{abs_frame_path}'")
         concat_lines.append(f"duration {exact_duration:.4f}")
         
     except Exception as e:
-        print(f"Skipped TTS chunk: {e}")
+        print(f"Skipped Scene {i} due to Error: {e}")
 
 if not concat_lines:
-    print("Error: No valid scenes were stitched. The AI may have hallucinated IDs.")
+    print("Error: No valid scenes generated.")
     exit(1)
 
-# FFmpeg concat requires the last file to be stated again without a duration
-last_file_line = concat_lines[-2]
-concat_lines.append(last_file_line)
+concat_lines.append(concat_lines[-2])
 
 audio_path = "videos/temp/final_narration.wav"
 sf.write(audio_path, np.concatenate(final_audio_pieces), sample_rate)
@@ -257,4 +270,4 @@ ffmpeg_cmd =[
 ]
 
 subprocess.run(ffmpeg_cmd)
-print(f"[+] Success! Edited & Synced Video generated at {final_video_path}")
+print(f"[+] Success! Cinematic Synced Video generated at {final_video_path}")
