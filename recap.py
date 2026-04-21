@@ -62,22 +62,18 @@ for idx, img_url in enumerate(image_urls):
     image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
 
     # --- 1. Prepare Base64 for Gemini AI ---
-    # We keep the strip uncut, but scale width to max 768px to prevent huge API payload sizes
-    gemini_img = image.copy()
-    if gemini_img.width > 768:
-        gemini_img = gemini_img.resize((768, int(gemini_img.height * (768 / gemini_img.width))), Image.Resampling.LANCZOS)
-    
+    # Sending the FULL WHOLE file without cropping or resizing
     buffered = io.BytesIO()
-    gemini_img.save(buffered, format="JPEG", quality=75)
+    image.save(buffered, format="JPEG", quality=85)
     base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
 
     # --- 2. Prepare Image for FFMPEG Video ---
     # ffmpeg 'concat' requires all images to be the exact same resolution.
-    # We place the long strip onto a standard vertical video canvas (1080x1920)
+    # We place the WHOLE strip onto a standard vertical video canvas (1080x1920) with no cropping
     TARGET_W, TARGET_H = 1080, 1920
     bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0)) # Black background
     
-    # Scale image to fit within the 1080x1920 canvas without stretching
+    # Scale image to fit within the 1080x1920 canvas without stretching or cropping
     scale = min(TARGET_W / image.width, TARGET_H / image.height)
     new_w = int(image.width * scale)
     new_h = int(image.height * scale)
@@ -108,7 +104,7 @@ STRICT RULES:
 7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
 8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe."""
 
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
 parts = [{"text": prompt_text}]
 for b64 in base64_panels:
     parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64}})
@@ -127,19 +123,16 @@ except Exception as e:
     exit(1)
 
 print("[4] Generating Fast-Paced Audio via Kokoro TTS...")
-
-# 1. Download model if it doesn't exist
 if not os.path.exists("kokoro-v0_19.onnx"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx", "kokoro-v0_19.onnx")
 
-# 2. Download the NEW voices.bin if it doesn't exist (Replacing voices.json)
+# Use voices.bin to fix the NumPy Pickle Error
 if not os.path.exists("voices.bin"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.bin", "voices.bin")
 
-# 3. Initialize Kokoro with voices.bin
 kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
 
-sentences = [s.strip() for s in re.split(r'(?<=[.!?]) +|\n+', script) if s.strip()]
+sentences =[s.strip() for s in re.split(r'(?<=[.!?]) +|\n+', script) if s.strip()]
 audio_pieces =[]
 sample_rate = 24000
 
@@ -163,9 +156,14 @@ time_per_panel = total_audio_time / len(panel_files)
 concat_file_path = "videos/temp/vid_list.txt"
 with open(concat_file_path, "w") as f:
     for pf in panel_files:
-        f.write(f"file '{os.path.basename(pf)}'\n")
+        # Generate Absolute Paths to guarantee FFmpeg finds them
+        abs_path = os.path.abspath(pf).replace('\\', '/')
+        f.write(f"file '{abs_path}'\n")
         f.write(f"duration {time_per_panel:.2f}\n")
-    f.write(f"file '{os.path.basename(panel_files[-1])}'\n")
+    
+    # The last file needs to be added again without a duration per ffmpeg docs
+    last_path = os.path.abspath(panel_files[-1]).replace('\\', '/')
+    f.write(f"file '{last_path}'\n")
 
 final_video_path = "videos/final_recap.mp4"
 ffmpeg_cmd =[
@@ -181,7 +179,7 @@ ffmpeg_cmd =[
     "-shortest", final_video_path
 ]
 
-subprocess.run(ffmpeg_cmd, cwd="videos/temp", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-os.rename(f"videos/temp/final_recap.mp4", final_video_path)
+# FFmpeg runs in standard directory. os.rename is removed.
+subprocess.run(ffmpeg_cmd)
 
 print(f"[+] Success! Video completely generated at {final_video_path}")
