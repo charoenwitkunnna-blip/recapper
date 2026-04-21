@@ -18,14 +18,26 @@ CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 
 # --- DYNAMIC API KEY EXTRACTION ---
 GEMINI_API_KEYS = []
-found_key_names =[]
+found_key_names = []
+
+pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
+
+# Collect (index, key_name, value)
+temp_keys = []
 
 for key, value in os.environ.items():
-    if "GEMINI" in key and "KEY" in key and value.strip():
-        # Exclude dummy placeholder strings
-        if "YOUR_API_KEY" not in value:
-            GEMINI_API_KEYS.append(value.strip())
-            found_key_names.append(key)
+    match = pattern.fullmatch(key)
+    if match and value.strip() and "YOUR_API_KEY" not in value:
+        index = int(match.group(1))
+        temp_keys.append((index, key, value.strip()))
+
+# Sort by number (1,2,3...)
+temp_keys.sort(key=lambda x: x[0])
+
+# Extract ordered lists
+for _, key_name, key_value in temp_keys:
+    GEMINI_API_KEYS.append(key_value)
+    found_key_names.append(key_name)
 
 VOICE_MODEL = "am_adam"
 AUDIO_SPEED = 1.25
