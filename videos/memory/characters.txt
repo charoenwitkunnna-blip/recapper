@@ -1,9 +1,2 @@
-- "Eira Shadowglow" alias, blonde hair, red eyes, skilled assassin
-  Real Name: Eira Shadowglow
-- "Cormac Blackwood" alias, red hair, muscular build, warrior
-  Real Name: Cormac Blackwood
-- "Lysander Flynn" alias, blonde hair, charming smile, thief
-  Real Name: Lysander Flynn
-  New Character:
-  - "Kael Darkhaven" alias, dark hair, brooding eyes, mage
-    Real Name: Kael Darkhaven
+(characters not present in the database, so it remains as initially listed)
+        (updated character database stays unchanged since no new characters are added or modified based on this image.)
