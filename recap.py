@@ -127,11 +127,17 @@ except Exception as e:
     exit(1)
 
 print("[4] Generating Fast-Paced Audio via Kokoro TTS...")
+
+# 1. Download model if it doesn't exist
 if not os.path.exists("kokoro-v0_19.onnx"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx", "kokoro-v0_19.onnx")
-    urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.json", "voices.json")
 
-kokoro = Kokoro("kokoro-v0_19.onnx", "voices.json")
+# 2. Download the NEW voices.bin if it doesn't exist (Replacing voices.json)
+if not os.path.exists("voices.bin"):
+    urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.bin", "voices.bin")
+
+# 3. Initialize Kokoro with voices.bin
+kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
 
 sentences = [s.strip() for s in re.split(r'(?<=[.!?]) +|\n+', script) if s.strip()]
 audio_pieces =[]
