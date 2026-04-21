@@ -34,7 +34,7 @@ def split_into_panels(img, min_gap=30):
             consecutive_empty_rows = 0
 
     split_y_positions.append(height)
-    panels = []
+    panels =[]
     for i in range(len(split_y_positions) - 1):
         top, bottom = split_y_positions[i], split_y_positions[i+1]
         if bottom - top > 100: 
@@ -47,7 +47,7 @@ def split_into_panels(img, min_gap=30):
     return panels if panels else [img]
 
 print(f"Loading: {CHAPTER_URL}")
-image_urls, site_cookies = [], {}
+image_urls, site_cookies =[], {}
 
 with SB(uc=True, xvfb=True, locale_code="en") as sb:
     sb.uc_open_with_reconnect(CHAPTER_URL, reconnect_time=6)
@@ -70,7 +70,7 @@ if not image_urls: exit(1)
 
 os.makedirs("videos/temp", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
-video_files, story_context = [], []
+video_files, story_context = [],[]
 
 for idx, img_url in enumerate(image_urls):
     if idx > 0: break # Process only first strip for testing
@@ -96,49 +96,50 @@ for idx, img_url in enumerate(image_urls):
         panel.save(buffered, format="JPEG")
         encoded_string = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-        # STEP 1: OCR
+        # STEP 1: OCR TEXT GRAB
         ocr_text = pytesseract.image_to_string(panel).strip()
         ocr_text = " ".join([w for w in ocr_text.split() if len(w) > 1])
+        if ocr_text: print(f"     [OCR] Found dialogue: {ocr_text}")
         
-        # STEP 2: MOONDREAM (VISION) - STRICT ANTI-HALLUCINATION PROMPT
-        vision_prompt = "Describe ONLY the literal physical appearance of the main character (hair, clothes) and their exact physical action. Do not guess plot, backstory, or names. Keep it to 1 sentence."
-        try:
-            res_vision = requests.post("http://localhost:11434/api/generate", json={
-                "model": "moondream", "prompt": vision_prompt, "images": [encoded_string], "stream": False
-            }, timeout=60)
-            raw_visuals = res_vision.json().get('response', '').strip()
-        except: raw_visuals = "A character is visible."
+        # STEP 2: GOOGLE GEMINA (VISION + WRITER ALL IN ONE)
+        recent_story = " ".join(story_context[-2:]) if story_context else "The story just began."
+        
+        gemma_prompt = f"""You are a strict, factual narrator recapping a Manhwa. Look at this image. 
 
-        # STEP 3: LLAMA 3.2 (WRITER) - STRICT ANTI-HALLUCINATION PROMPT
-        recent_story = " ".join(story_context[-2:]) if story_context else "The story starts."
-        writer_prompt = f"""You are a strict, factual narrator recapping a Manhwa. Write EXACTLY ONE engaging sentence narrating what happens in this scene.
+        Context of the story so far: {recent_story}
+        Spoken dialogue in the image: {ocr_text if ocr_text else "No dialogue."}
 
-        Past Context: {recent_story}
-        Visuals: {raw_visuals}
-        Spoken Text (OCR): {ocr_text if ocr_text else "None."}
-
-        STRICT RULES TO PREVENT HALLUCINATIONS:
-        1. DO NOT invent names! If the OCR text does not explicitly state a name, refer to them purely by their visuals (e.g., "The blonde man", "The woman in the cape", "The warrior").
-        2. DO NOT make up magic powers or lore that isn't literally in the Visuals or OCR text.
-        3. DO NOT say "The image shows" or "In this panel".
-        4. If the visual is empty or just an object, reply ONLY with the word: SKIP
+        Write EXACTLY ONE engaging sentence narrating what happens right now. 
+        
+        STRICT RULES:
+        1. DO NOT invent names! If the dialogue does not explicitly state a name, describe the characters purely by what you see in the image (e.g., "The blonde boy", "The man in the red cape").
+        2. DO NOT make up magic powers or background lore. Stick purely to the visual action.
+        3. Do not say "The image shows" or "In this panel".
+        4. If the image is just a blank wall, a logo, or empty space, reply ONLY with the word: SKIP
         """
-        
+
         try:
-            res_writer = requests.post("http://localhost:11434/api/generate", json={
-                "model": "llama3.2", # <-- UPGRADED MODEL HERE
-                "prompt": writer_prompt, "stream": False
+            # We are querying the Google multimodal model now!
+            res = requests.post("http://localhost:11434/api/generate", json={
+                "model": "paligemma", # Google's Vision-Language Gemma model
+                "prompt": gemma_prompt, 
+                "images": [encoded_string],
+                "stream": False
             }, timeout=90)
-            narrator_script = res_writer.json().get('response', '').strip()
-        except: continue
+            narrator_script = res.json().get('response', '').strip()
+        except: 
+            print("     [!] AI failed. Skipping.")
+            continue
 
         narrator_script = narrator_script.replace("*", "").replace('"', '').strip()
-        if "SKIP" in narrator_script.upper() or len(narrator_script) < 10: continue
+        if "SKIP" in narrator_script.upper() or len(narrator_script) < 10: 
+            print("     [!] Panel skipped.")
+            continue
             
         print(f"     Narrator: {narrator_script}")
         story_context.append(narrator_script)
 
-        # STEP 4: VIDEO BUILD
+        # STEP 3: VIDEO BUILD
         audio_path = f"videos/temp/audio_{p_idx}.mp3"
         gTTS(text=narrator_script, lang='en', slow=False).save(audio_path)
         video_path = f"videos/temp/video_{p_idx}.mp4"
