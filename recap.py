@@ -9,6 +9,18 @@ import time
 import subprocess
 
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
+MEMORY_FILE = "videos/memory/characters.txt"
+
+def load_memory():
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, "r") as f:
+            return f.read().strip()
+    return "No characters logged yet."
+
+def save_memory(memory_text):
+    os.makedirs(os.path.dirname(MEMORY_FILE), exist_ok=True)
+    with open(MEMORY_FILE, "w") as f:
+        f.write(memory_text)
 
 def split_into_panels(img, min_gap=30):
     gray = img.convert("L")
@@ -33,7 +45,7 @@ def split_into_panels(img, min_gap=30):
             consecutive_empty_rows = 0
 
     split_y_positions.append(height)
-    panels = []
+    panels =[]
     for i in range(len(split_y_positions) - 1):
         top, bottom = split_y_positions[i], split_y_positions[i+1]
         if bottom - top > 150: 
@@ -45,19 +57,20 @@ def split_into_panels(img, min_gap=30):
                 panels.append(panel)
     return panels if panels else [img]
 
-def call_ai(model, prompt, image_b64=None):
-    payload = {"model": model, "prompt": prompt, "stream": False}
-    if image_b64:
-        payload["images"] = [image_b64]
-    
+def call_vision_ai(prompt, image_b64):
     try:
-        res = requests.post("http://localhost:11434/api/generate", json=payload, timeout=300)
+        res = requests.post("http://localhost:11434/api/generate", json={
+            "model": "minicpm-v", 
+            "prompt": prompt, 
+            "images": [image_b64], 
+            "stream": False
+        }, timeout=300)
         return res.json().get('response', '').strip()
     except Exception as e:
-        return f"Error: {e}"
+        return ""
 
 print(f"Loading: {CHAPTER_URL}")
-image_urls, site_cookies = [], {}
+image_urls, site_cookies =[], {}
 
 with SB(uc=True, xvfb=True, locale_code="en") as sb:
     sb.uc_open_with_reconnect(CHAPTER_URL, reconnect_time=6)
@@ -78,11 +91,14 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
 if not image_urls: exit(1)
 
 os.makedirs("videos/temp", exist_ok=True)
+os.makedirs("videos/memory", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
-video_files, story_context = [], []
+video_files, story_context = [],[]
+
+save_memory("No characters logged yet.")
 
 for idx, img_url in enumerate(image_urls):
-    if idx > 0: break # Process only first strip for testing
+    if idx > 0: break # Testing: only first strip
 
     img_response = requests.get(img_url, headers=headers, cookies=site_cookies)
     if img_response.status_code != 200: continue
@@ -93,7 +109,6 @@ for idx, img_url in enumerate(image_urls):
     for p_idx, panel in enumerate(panels):
         print(f"\n  -> Processing Panel {p_idx+1}/{len(panels)}...")
         
-        # Resize for AI processing
         if panel.width > 800:
             panel = panel.resize((800, int(panel.height * (800 / panel.width))), Image.Resampling.LANCZOS)
         
@@ -104,30 +119,70 @@ for idx, img_url in enumerate(image_urls):
         panel.save(buffered, format="JPEG")
         encoded_string = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-        # AI 1: THE EYES (Visuals)
-        print("     [1/3] Moondream: Analyzing visuals...")
-        visual_desc = call_ai("moondream", "Describe the characters, their expressions, and the physical action in detail. Do not read any text.", encoded_string)
-
-        # AI 2: THE EARS (Speech Reading)
-        print("     [2/3] MiniCPM-V: Reading speech bubbles...")
-        speech_text = call_ai("minicpm-v", "Extract every word written in speech bubbles or text boxes. Output only the transcribed text.", encoded_string)
-
-        # AI 3: THE WRITER (Narrative)
-        print("     [3/3] Llama 3.2: Drafting story sentence...")
-        recent = " ".join(story_context[-2:]) if story_context else "The story begins."
-        narrative_prompt = f"""You are a dramatic Manhwa narrator. 
-        Recent Context: {recent}
-        Visual Details: {visual_desc}
-        Dialogue Found: {speech_text}
+        # ==========================================
+        # PASS 1: The Director (Categorize Faces & OCR)
+        # ==========================================
+        print("     [Director] Identifying characters and reading text...")
+        current_memory = load_memory()
         
-        Combine these into ONE intense, story-driven sentence. Use third-person. 
-        Do not say 'In the image'. If dialogue reveals a name, use it. 
-        If the panel is non-story (logo/blank), reply 'SKIP'."""
+        director_prompt = f"""You are an anime character tracker and OCR reader. 
+        Current Character Database: {current_memory}
         
-        narrator_script = call_ai("llama3.2", narrative_prompt)
+        Look at the image and do TWO things:
+        1. Identify the characters. If they are in the database, use their name. If they are new, invent a descriptive name for them (e.g., "Blue-Haired Boy") and add them to the database.
+        2. Read all text inside speech bubbles or boxes.
+
+        Format your reply EXACTLY like this:
+        [PRESENT]
+        (list the characters in the image here)
+        [TEXT]
+        (write the spoken dialogue here, or 'None')
+        [DATABASE]
+        (write the updated character database here)
+        """
+        
+        director_output = call_vision_ai(director_prompt, encoded_string)
+        
+        # Safely parse the director's output
+        present_chars, speech_text, new_db = "Unknown", "None", current_memory
+        if "[PRESENT]" in director_output and "[TEXT]" in director_output:
+            try:
+                present_chars = director_output.split("[TEXT]")[0].replace("[PRESENT]", "").strip()
+                remainder = director_output.split("[TEXT]")[1]
+                if "[DATABASE]" in remainder:
+                    speech_text = remainder.split("[DATABASE]")[0].strip()
+                    new_db = remainder.split("[DATABASE]")[1].strip()
+                    save_memory(new_db)
+            except: pass
+
+        print(f"     -> Characters: {present_chars}")
+        print(f"     -> Dialogue: {speech_text}")
+
+        # ==========================================
+        # PASS 2: The Writer (Narrative Generation)
+        # ==========================================
+        print("     [Writer] Looking at the image and drafting the script...")
+        recent_story = " ".join(story_context[-2:]) if story_context else "The story begins."
+        
+        writer_prompt = f"""You are a dramatic Manhwa narrator. Look at the action happening in this image.
+        
+        Here is what you need to know about the image:
+        - Characters present: {present_chars}
+        - Spoken Dialogue: {speech_text}
+        
+        Recent Story Context: {recent_story}
+        
+        Write EXACTLY ONE cinematic, dramatic sentence narrating the story. 
+        DO NOT describe the image. Just tell the story based on what the characters are doing.
+        Use the character names provided!
+        If the image is just an empty wall or logo, reply ONLY with: SKIP
+        """
+        
+        narrator_script = call_vision_ai(writer_prompt, encoded_string).replace("*", "").replace('"', '').strip()
 
         # Build Video
         if "SKIP" in narrator_script.upper() or len(narrator_script) < 10:
+            print("     [!] Panel skipped.")
             continue
             
         print(f"     Narrator: {narrator_script}")
