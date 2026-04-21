@@ -104,7 +104,7 @@ STRICT RULES:
 7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
 8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe."""
 
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
+gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-latest:generateContent?key={GEMINI_API_KEY}"
 parts = [{"text": prompt_text}]
 for b64 in base64_panels:
     parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64}})
