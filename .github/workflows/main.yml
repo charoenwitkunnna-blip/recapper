@@ -17,18 +17,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama/models
-          key: ollama-triple-ai-v1
+          key: ollama-minicpm-v-only
 
       - name: Install and Start Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           sleep 10
-          # Eyes
-          ollama pull moondream
-          # Ears (OCR Vision)
+          # Pulling the single, powerful multimodal model for Director + Writer
           ollama pull minicpm-v
-          # Brain (Narrative)
-          ollama pull llama3.2
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -39,6 +35,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ffmpeg
+          # No Tesseract needed anymore! AI handles OCR natively.
           pip install seleniumbase requests pillow gtts
           seleniumbase install chromedriver
 
@@ -52,3 +49,13 @@ jobs:
         with:
           name: recap-video
           path: videos/
+
+      - name: Commit and Push Recap
+        if: always()
+        run: |
+          git config --global user.name "AI Recapper Bot"
+          git config --global user.email "bot@github.com"
+          mkdir -p videos
+          git add videos/
+          git commit -m "Auto-generate Manhwa Recap Video" || echo "No changes"
+          git push
