@@ -179,11 +179,10 @@ retry_delay = 5
 script_data = None
 current_key_idx = 0
 
-# --- ROBUST API KEY ROTATION ---
 for attempt in range(max_retries):
     api_key = GEMINI_API_KEYS[current_key_idx]
     
-    # --- UPDATED TO SPECIFICALLY USE gemini-flash-latest ---
+    # Strictly using gemini-flash-latest
     gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
     
     print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx} ({found_key_names[current_key_idx]})...")
@@ -224,7 +223,7 @@ if not script_data or "panels" not in script_data:
     exit(1)
 
 # --- EXTRACT & SAVE CHARACTER DATA ---
-characters = script_data.get("characters",[])
+characters = script_data.get("characters", [])
 panels = script_data.get("panels",[])
 
 if characters:
@@ -266,8 +265,9 @@ for i, block in enumerate(panels):
         ai_h = ai_heights[img_idx]
         scale_factor = raw_img.height / ai_h 
         
-        top_px = int((start_mark * 10) * scale_factor)
-        bottom_px = int((end_mark * 10) * scale_factor)
+        # Add a little padding to the crop so it doesn't look cramped
+        top_px = int((start_mark * 10) * scale_factor) - 20
+        bottom_px = int((end_mark * 10) * scale_factor) + 20
         
         top_px = max(0, min(top_px, raw_img.height - 10))
         bottom_px = max(top_px + 10, min(bottom_px, raw_img.height))
@@ -279,24 +279,23 @@ for i, block in enumerate(panels):
         audio_path = f"videos/temp/audio_{i:04d}.wav"
         sf.write(audio_path, samples, sample_rate)
         
-        exact_duration = max(0.5, len(samples) / sample_rate) # Prevent duration from being too short
+        exact_duration = max(0.5, len(samples) / sample_rate)
         frames = max(1, int(exact_duration * 30))
         
         aspect_ratio = cropped_panel.height / cropped_panel.width
         frame_path = f"videos/temp/panel_{i:04d}.jpg"
         scene_video_path = f"videos/temp/scene_{i:04d}.mp4"
         
-        # --- 1. LONG PANEL DETECTED: PAN DOWN (SLIDE) EFFECT ---
-        if aspect_ratio > 1.8:
-            print(f"   -> Scene {i:02d} | Long Panel Detected | Effect: Cinematic Pan Down")
+        # --- 1. LONG PANEL: SMOOTH PAN FROM THE VERY TOP DOWN ---
+        # The threshold is higher now (2.2) so it only pans if it's genuinely too tall to fit nicely.
+        if aspect_ratio > 2.2:
+            print(f"   -> Scene {i:02d} | Extreme Vertical Panel (AR: {aspect_ratio:.1f}) | Effect: Pan Down")
             
-            # Format the input image to exactly 1080 width and whatever natural height scales out
             new_w = TARGET_W
             new_h = max(TARGET_H, int(TARGET_W * aspect_ratio))
             scaled_panel = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
             scaled_panel.save(frame_path, format="JPEG", quality=95)
             
-            # Use strict evaluation for FFmpeg crop sliding (No single quotes to break subprocess parsing)
             ffmpeg_cmd =[
                 "ffmpeg", "-y", 
                 "-loop", "1", "-t", f"{exact_duration:.4f}",
@@ -308,14 +307,15 @@ for i, block in enumerate(panels):
                 scene_video_path
             ]
             
-        # --- 2. NORMAL PANEL DETECTED: ZOOM IN EFFECT ---
+        # --- 2. NORMAL PANEL: BLUR BACKGROUND + SLOW ZOOM IN ---
         else:
-            print(f"   -> Scene {i:02d} | Normal Panel Detected | Effect: Smooth Zoom In")
+            print(f"   -> Scene {i:02d} | Fit Size Panel (AR: {aspect_ratio:.1f}) | Effect: Zoom In")
             
-            # Create a 1080x1920 padded blur background 
+            # Create a premium blurred background
             bg = cropped_panel.resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
             bg = bg.filter(ImageFilter.GaussianBlur(35)) 
             
+            # Scale the panel to perfectly fit the screen bounds
             scale = min(TARGET_W / cropped_panel.width, TARGET_H / cropped_panel.height)
             new_w, new_h = int(cropped_panel.width * scale), int(cropped_panel.height * scale)
             panel_scaled = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
@@ -325,22 +325,37 @@ for i, block in enumerate(panels):
             bg.paste(panel_scaled, (x_offset, y_offset))
             bg.save(frame_path, format="JPEG", quality=95)
             
-            # Use `zoompan` for center zooming without sub-shell quoting conflicts
+            # Flawless Zoompan implementation (No single quotes causing subprocess crashes)
             ffmpeg_cmd =[
                 "ffmpeg", "-y", 
                 "-i", frame_path, "-i", audio_path,
                 "-map", "0:v", "-map", "1:a",
-                "-vf", f"zoompan=z=zoom+0.0015:x=iw/2-(iw/zoom)/2:y=ih/2-(ih/zoom)/2:d={frames}:s=1080x1920:fps=30,format=yuv420p",
+                "-vf", f"zoompan=z=zoom+0.0015:d={frames}:x=iw/2-(iw/zoom)/2:y=ih/2-(ih/zoom)/2:s=1080x1920:fps=30,format=yuv420p",
                 "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "24000", 
                 "-pix_fmt", "yuv420p", "-shortest",
                 scene_video_path
             ]
             
-        # Execute Render and grab errors if any occur
+        # Render the scene
         result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+        
+        # FALLBACK LOGIC: If a zoom/pan effect randomly fails, we catch it and force a static render
+        # so the entire final video doesn't break due to a missed clip!
         if result.returncode != 0:
-            print(f"   [!] FFmpeg Error on Scene {i}:\n{result.stderr}")
-        elif os.path.exists(scene_video_path):
+            print(f"      [!] FFmpeg Effect Error! Falling back to static frame for Scene {i:02d}...")
+            fallback_cmd =[
+                "ffmpeg", "-y", "-loop", "1", "-t", f"{exact_duration:.4f}",
+                "-i", frame_path, "-i", audio_path,
+                "-map", "0:v", "-map", "1:a",
+                "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "24000",
+                "-pix_fmt", "yuv420p", "-shortest",
+                scene_video_path
+            ]
+            subprocess.run(fallback_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+        # If successfully generated, add it to the final stitching list
+        if os.path.exists(scene_video_path):
             abs_scene_path = os.path.abspath(scene_video_path).replace('\\', '/')
             concat_lines.append(f"file '{abs_scene_path}'")
             
@@ -358,7 +373,6 @@ with open(concat_file_path, "w") as f:
 print("[5] Stitching the Final Edited Masterpiece...")
 final_video_path = "videos/final_recap.mp4"
 
-# Lossless concat demuxing
 ffmpeg_cmd =[
     "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_file_path, 
     "-c", "copy", final_video_path
