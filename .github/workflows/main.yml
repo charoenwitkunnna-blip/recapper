@@ -17,7 +17,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama/models
-          key: ollama-moondream-llama3.2
+          key: ollama-qwen2.5-vl-3b
 
       - name: Install and Start Ollama
         run: |
@@ -25,11 +25,8 @@ jobs:
           ollama serve &
           sleep 5
           
-          # Pull the fast Vision Model (The Eyes)
-          ollama pull moondream
-          
-          # Pull the Memory/Writer Model (The Brain)
-          ollama pull llama3.2
+          # Pulling the new Qwen2.5-VL 3B Multimodal Model
+          ollama pull qwen2.5-vl:3b
 
       - name: Set up Python
         uses: actions/setup-python@v4
