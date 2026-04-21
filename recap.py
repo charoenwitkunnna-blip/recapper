@@ -10,6 +10,18 @@ import subprocess
 import pytesseract
 
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
+MEMORY_FILE = "videos/memory/characters.txt"
+
+def load_memory():
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, "r") as f:
+            return f.read().strip()
+    return "No characters encountered yet."
+
+def save_memory(memory_text):
+    os.makedirs(os.path.dirname(MEMORY_FILE), exist_ok=True)
+    with open(MEMORY_FILE, "w") as f:
+        f.write(memory_text)
 
 def split_into_panels(img, min_gap=30):
     gray = img.convert("L")
@@ -37,7 +49,7 @@ def split_into_panels(img, min_gap=30):
     panels =[]
     for i in range(len(split_y_positions) - 1):
         top, bottom = split_y_positions[i], split_y_positions[i+1]
-        if bottom - top > 100: 
+        if bottom - top > 150:  # Ignore tiny artifacts
             panel = img.crop((0, top, width, bottom))
             if panel.height > 2500:
                 panels.append(panel.crop((0, 0, panel.width, panel.height//2)))
@@ -58,7 +70,6 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
 
     sb.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(3)
-
     images = sb.find_elements("css selector", ".wp-manga-chapter-img")
     for img in images:
         src = img.get_attribute("data-src") or img.get_attribute("src")
@@ -69,8 +80,12 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
 if not image_urls: exit(1)
 
 os.makedirs("videos/temp", exist_ok=True)
+os.makedirs("videos/memory", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
-video_files, story_context =[],[]
+video_files =[]
+
+# Clear memory at start of new run
+save_memory("No characters encountered yet.")
 
 for idx, img_url in enumerate(image_urls):
     if idx > 0: break # Process only first strip for testing
@@ -96,50 +111,81 @@ for idx, img_url in enumerate(image_urls):
         panel.save(buffered, format="JPEG")
         encoded_string = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-        # STEP 1: OCR TEXT GRAB
+        # ==========================================
+        # STEP 1: EARS (Extract Text/Dialogue via OCR)
+        # ==========================================
         ocr_text = pytesseract.image_to_string(panel).strip()
         ocr_text = " ".join([w for w in ocr_text.split() if len(w) > 1])
         if ocr_text: print(f"     [OCR] Found dialogue: {ocr_text}")
-        
-        # STEP 2: GOOGLE GEMMA 3 (VISION + WRITER ALL IN ONE)
-        recent_story = " ".join(story_context[-2:]) if story_context else "The story just began."
-        
-        gemma_prompt = f"""You are a strict, factual narrator recapping a Manhwa. Look at this image. 
+        else: ocr_text = "No dialogue."
 
-        Context of the story so far: {recent_story}
-        Spoken dialogue in the image: {ocr_text if ocr_text else "No dialogue."}
+        # ==========================================
+        # STEP 2: EYES (Vision AI describes the scene)
+        # ==========================================
+        print("     [Eyes] Analyzing characters visually...")
+        vision_prompt = "Describe exactly who is in this image. Describe their physical appearance (hair, clothes, expression) and what action they are doing. Be highly literal. Do not guess names."
+        try:
+            res_vision = requests.post("http://localhost:11434/api/generate", json={
+                "model": "llava:7b", "prompt": vision_prompt, "images":[encoded_string], "stream": False
+            }, timeout=300)
+            vision_text = res_vision.json().get('response', '').strip()
+        except Exception as e:
+            print(f"     [!] Vision AI failed: {e}")
+            continue
 
-        Write EXACTLY ONE engaging sentence narrating what happens right now. 
+        # ==========================================
+        # STEP 3 & 4: BRAIN & MOUTH (Update Memory & Write Script)
+        # ==========================================
+        print("     [Brain] Consulting long-term memory & writing script...")
+        current_memory = load_memory()
         
-        STRICT RULES:
-        1. DO NOT invent names! If the dialogue does not explicitly state a name, describe the characters purely by what you see in the image (e.g., "The blonde boy", "The man in the red cape").
-        2. DO NOT make up magic powers or background lore. Stick purely to the visual action.
-        3. Do not say "The image shows" or "In this panel".
-        4. If the image is just a blank wall, a logo, or empty space, reply ONLY with the word: SKIP
+        brain_prompt = f"""You are the director of an anime recap. 
+
+        CURRENT LONG-TERM CHARACTER MEMORY: 
+        {current_memory}
+
+        NEW SCENE VISUALS: 
+        {vision_text}
+
+        NEW DIALOGUE (OCR): 
+        {ocr_text}
+
+        Perform TWO tasks.
+        TASK 1: Update the character memory. If a new person is in the visuals, give them a descriptive temporary name (e.g., 'Red-Haired Girl', 'The Leader') and log their personality based on dialogue/actions. If an existing character is acting, update their profile.
+        TASK 2: Write EXACTLY ONE punchy, engaging sentence narrating the scene. Use the character names from your memory! Do not say "In this scene".
+
+        You MUST output in this EXACT format:
+        MEMORY:
+        (Your updated list of characters and their traits here)
+        SCRIPT:
+        (Your single sentence narration here)
         """
 
         try:
-            # Pointing to the new Gemma 3 model
-            res = requests.post("http://localhost:11434/api/generate", json={
-                "model": "gemma3:4b", 
-                "prompt": gemma_prompt, 
-                "images": [encoded_string],
-                "stream": False
+            res_brain = requests.post("http://localhost:11434/api/generate", json={
+                "model": "llama3.2", "prompt": brain_prompt, "stream": False
             }, timeout=300)
-            narrator_script = res.json().get('response', '').strip()
-        except: 
-            print("     [!] AI failed. Skipping.")
+            brain_output = res_brain.json().get('response', '').strip()
+            
+            # Extract Memory and Script using Python
+            if "SCRIPT:" in brain_output:
+                new_memory = brain_output.split("SCRIPT:")[0].replace("MEMORY:", "").strip()
+                narrator_script = brain_output.split("SCRIPT:")[1].strip()
+                save_memory(new_memory) # Save memory for the next image!
+            else:
+                narrator_script = brain_output
+                
+        except Exception as e: 
+            print(f"     [!] Brain AI failed: {e}")
             continue
 
         narrator_script = narrator_script.replace("*", "").replace('"', '').strip()
         if "SKIP" in narrator_script.upper() or len(narrator_script) < 10: 
-            print("     [!] Panel skipped.")
             continue
             
         print(f"     Narrator: {narrator_script}")
-        story_context.append(narrator_script)
 
-        # STEP 3: VIDEO BUILD
+        # Build Video
         audio_path = f"videos/temp/audio_{p_idx}.mp3"
         gTTS(text=narrator_script, lang='en', slow=False).save(audio_path)
         video_path = f"videos/temp/video_{p_idx}.mp4"
