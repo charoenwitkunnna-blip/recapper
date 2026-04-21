@@ -1,16 +1,30 @@
-name: AI Manhwa Recapper (Automated Pipeline)
-on: 
-  workflow_dispatch: 
+name: Local AI Manhwa Recapper
+on:
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  run-ai-pipeline:
+  run-local-ai:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Cache Ollama Models
+        id: ollama-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama/models
+          key: ollama-moondream-v1
+
+      - name: Install and Start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve &
+          sleep 5
+          ollama pull moondream
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -20,13 +34,11 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb ffmpeg libgl1
-          pip install seleniumbase requests pillow opencv-python-headless numpy google-generativeai edge-tts
+          sudo apt-get install -y xvfb ffmpeg
+          pip install seleniumbase requests pillow gtts
           seleniumbase install chromedriver
 
       - name: Run AI Video Recapper
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python recap.py
 
