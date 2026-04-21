@@ -55,32 +55,39 @@ panel_files =[]
 print(f"[2] Downloading and Processing {len(image_urls)} Full Strips...")
 
 for idx, img_url in enumerate(image_urls): 
-    img_response = requests.get(img_url, headers=headers, cookies=site_cookies)
-    if img_response.status_code != 200: continue
+    try:
+        img_response = requests.get(img_url, headers=headers, cookies=site_cookies)
+        if img_response.status_code != 200: continue
 
-    image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
+        image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
 
-    # Prepare Base64 for Gemini AI (Full Size)
-    buffered = io.BytesIO()
-    image.save(buffered, format="JPEG", quality=85)
-    base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
+        # Prepare Base64 for Gemini AI (Full Size)
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG", quality=85)
+        base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
 
-    # Prepare Image for FFMPEG Video
-    TARGET_W, TARGET_H = 1080, 1920
-    bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0)) 
-    
-    scale = min(TARGET_W / image.width, TARGET_H / image.height)
-    new_w = int(image.width * scale)
-    new_h = int(image.height * scale)
-    video_img = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
-    
-    x_offset = (TARGET_W - new_w) // 2
-    y_offset = (TARGET_H - new_h) // 2
-    bg.paste(video_img, (x_offset, y_offset))
-    
-    img_path = f"videos/temp/strip_{idx}.jpg"
-    bg.save(img_path, format="JPEG", quality=90)
-    panel_files.append(img_path)
+        # Prepare Image for FFMPEG Video
+        TARGET_W, TARGET_H = 1080, 1920
+        bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0)) 
+        
+        scale = min(TARGET_W / image.width, TARGET_H / image.height)
+        new_w = int(image.width * scale)
+        new_h = int(image.height * scale)
+        video_img = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        
+        x_offset = (TARGET_W - new_w) // 2
+        y_offset = (TARGET_H - new_h) // 2
+        bg.paste(video_img, (x_offset, y_offset))
+        
+        img_path = f"videos/temp/strip_{idx}.jpg"
+        bg.save(img_path, format="JPEG", quality=90)
+        panel_files.append(img_path)
+    except Exception as e:
+        print(f"Error processing image {idx}: {e}")
+
+if not base64_panels:
+    print("No images were successfully processed.")
+    exit(1)
 
 print(f"[3] Sending {len(base64_panels)} Full Strips to Gemini Flash Latest...")
 
@@ -101,24 +108,21 @@ for attempt in range(max_retries):
     try:
         gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
         
-        # Handle Successful Response
         if gemini_res.status_code == 200:
             gemini_data = gemini_res.json()
             if 'candidates' in gemini_data and 'content' in gemini_data['candidates'][0]:
                 script = gemini_data['candidates'][0]['content']['parts'][0]['text'].strip()
-                break # Success! Exit loop.
+                break 
             else:
                 print(f"Error in JSON structure: {gemini_data}")
                 exit(1)
         
-        # Handle Transient Errors (503 Service Unavailable or 429 Too Many Requests)
         elif gemini_res.status_code in [503, 429]:
             wait_time = retry_delay * (2 ** attempt)
-            print(f"API Busy/Overloaded ({gemini_res.status_code}). Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})")
+            print(f"API Busy ({gemini_res.status_code}). Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})")
             time.sleep(wait_time)
             continue
         
-        # Handle Fatal Errors
         else:
             print(f"\n=== HTTP ERROR {gemini_res.status_code} ===")
             print(gemini_res.text)
@@ -130,7 +134,7 @@ for attempt in range(max_retries):
         time.sleep(wait_time)
 
 if not script:
-    print("Failed to get a response from Gemini after 3 retries. The server is likely under heavy load. Try again in a few minutes.")
+    print("Failed to get a response from Gemini after 3 retries.")
     exit(1)
 
 print("\n=== AI GENERATED SCRIPT ===")
@@ -146,7 +150,6 @@ if not os.path.exists("voices.bin"):
 kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
 sentences =[s.strip() for s in re.split(r'(?<=[.!?]) +|\n+', script) if s.strip()]
 audio_pieces =[]
-sample_rate = 24000
 
 for sentence in sentences:
     try:
@@ -157,7 +160,7 @@ for sentence in sentences:
 
 final_audio = np.concatenate(audio_pieces)
 audio_path = "videos/temp/final_narration.wav"
-sf.write(audio_path, final_audio, sample_rate)
+sf.write(audio_path, final_audio, 24000)
 
 print("[5] Stitching Fast-Paced Slideshow Video...")
 with sf.SoundFile(audio_path) as f:
@@ -166,12 +169,16 @@ with sf.SoundFile(audio_path) as f:
 time_per_panel = total_audio_time / len(panel_files)
 concat_file_path = "videos/temp/vid_list.txt"
 
+# FIX: Define the absolute paths outside of the f-string curly braces to avoid backslash issues
 with open(concat_file_path, "w") as f:
     for pf in panel_files:
-        abs_path = os.path.abspath(pf).replace('\\', '/')
-        f.write(f"file '{abs_path}'\n")
+        abs_p = os.path.abspath(pf).replace('\\', '/')
+        f.write(f"file '{abs_p}'\n")
         f.write(f"duration {time_per_panel:.2f}\n")
-    f.write(f"file '{os.path.abspath(panel_files[-1]).replace('\\', '/')}'\n")
+    
+    # Add the last file again (standard FFmpeg concat requirement)
+    last_abs_p = os.path.abspath(panel_files[-1]).replace('\\', '/')
+    f.write(f"file '{last_abs_p}'\n")
 
 final_video_path = "videos/final_recap.mp4"
 ffmpeg_cmd =[
