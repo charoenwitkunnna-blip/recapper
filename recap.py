@@ -54,33 +54,26 @@ panel_files =[]
 
 print(f"[2] Downloading and Processing {len(image_urls)} Full Strips...")
 
-# Process the uncut strips directly
 for idx, img_url in enumerate(image_urls): 
     img_response = requests.get(img_url, headers=headers, cookies=site_cookies)
     if img_response.status_code != 200: continue
 
     image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
 
-    # --- 1. Prepare Base64 for Gemini AI ---
-    # Sending the FULL WHOLE file without cropping or resizing (Original setting kept)
+    # Prepare Base64 for Gemini AI (Full Size)
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=85)
     base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
 
-    # --- 2. Prepare Image for FFMPEG Video ---
-    # ffmpeg 'concat' requires all images to be the exact same resolution.
-    # We place the WHOLE strip onto a standard vertical video canvas (1080x1920) with no cropping
+    # Prepare Image for FFMPEG Video
     TARGET_W, TARGET_H = 1080, 1920
-    bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0)) # Black background
+    bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0)) 
     
-    # Scale image to fit within the 1080x1920 canvas without stretching or cropping
     scale = min(TARGET_W / image.width, TARGET_H / image.height)
     new_w = int(image.width * scale)
     new_h = int(image.height * scale)
-    
     video_img = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
     
-    # Paste the strip perfectly in the center of the canvas
     x_offset = (TARGET_W - new_w) // 2
     y_offset = (TARGET_H - new_h) // 2
     bg.paste(video_img, (x_offset, y_offset))
@@ -91,79 +84,66 @@ for idx, img_url in enumerate(image_urls):
 
 print(f"[3] Sending {len(base64_panels)} Full Strips to Gemini Flash Latest...")
 
-# --- THE ADVANCED YOUTUBE RECAP PROMPT ---
-prompt_text = """You are a professional scriptwriter for a highly successful YouTube Manhwa/Manga recap channel. Your task is to transform the provided chapter images into a highly detailed, engaging, and chronological recap script.
+prompt_text = """You are a professional scriptwriter for a highly successful YouTube Manhwa/Manga recap channel. Output ONLY plain text recap script. NO MARKDOWN. Be extremely detailed. Use high-energy language. Do not say 'our MC' more than once. Use fluid transitions. No fourth wall breaks."""
 
-STRICT RULES:
-1. NO MARKDOWN: You are strictly forbidden from using Markdown formatting. Output ONLY plain text with normal paragraph breaks. No asterisks, bolding, italics, hash symbols, or bullet points.
-2. BE EXTREMELY DETAILED: Walk through the chapter chronologically. Do not gloss over the middle. Capture every major plot beat, fight sequence, magic spell, inner thought, and lore reveal step-by-step.
-3. YOUTUBE RECAP VOCABULARY: Use high-energy, dynamic, and modern recap language. Inject action-packed verbs and slang like "blitzes", "tanks the hit", "flexes his aura", "drops a bombshell", "absolute menace", or "OP". Tell the story as if you are passionately explaining an awesome manhwa.
-4. BAN ON REPETITIVE NAMING ("OUR MC"): You are STRICTLY FORBIDDEN from using the phrase "our MC" more than ONCE in the entire script. You must constantly rotate how you address the main character. Use their actual name, pronouns, or creative aliases (e.g., "the protagonist", "our guy", "the ruthless assassin", "the magic student", "the boy").
-5. ADVANCED TRANSITIONS: Do not start sentences with basic words like "Then", "Suddenly", "After that", or "But". Use fluid, engaging transitions (e.g., "Without hesitation," "Refusing to back down," "Cutting through the tension," "Moments later," "Against all odds,").
-6. PARAPHRASE DIALOGUE & THOUGHTS: Do not use standard dialogue formatting or quote marks. Weave spoken words and inner monologues directly into the narrative.
-7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
-8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe."""
-
-# Original model kept
 gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
 parts = [{"text": prompt_text}]
 for b64 in base64_panels:
     parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64}})
-
 payload = {"contents": [{"parts": parts}]}
 
-try:
-    gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
-    
-    # NEW: First check if Google rejected the HTTP request entirely (e.g. 400 Bad Request, Payload Too Large)
-    if gemini_res.status_code != 200:
-        print(f"\n=== HTTP ERROR {gemini_res.status_code} ===")
-        print(gemini_res.text)
-        exit(1)
+# --- RETRY LOGIC WITH EXPONENTIAL BACKOFF ---
+max_retries = 3
+retry_delay = 5 # base seconds
+script = None
 
-    gemini_data = gemini_res.json()
-    
-    # NEW: Catch JSON-level Google API errors
-    if 'error' in gemini_data:
-        print("\n=== GEMINI API ERROR ===")
-        print(gemini_data['error'].get('message', gemini_data['error']))
-        exit(1)
+for attempt in range(max_retries):
+    try:
+        gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
         
-    # NEW: Check if 'candidates' exists at all
-    if 'candidates' not in gemini_data:
-        print("\n=== UNEXPECTED GEMINI RESPONSE ===")
-        print(gemini_data)
-        exit(1)
+        # Handle Successful Response
+        if gemini_res.status_code == 200:
+            gemini_data = gemini_res.json()
+            if 'candidates' in gemini_data and 'content' in gemini_data['candidates'][0]:
+                script = gemini_data['candidates'][0]['content']['parts'][0]['text'].strip()
+                break # Success! Exit loop.
+            else:
+                print(f"Error in JSON structure: {gemini_data}")
+                exit(1)
         
-    candidate = gemini_data['candidates'][0]
-    
-    # NEW: Catch Content/Safety filter blocks
-    if 'content' not in candidate:
-        print("\n=== CONTENT BLOCKED BY SAFETY FILTERS ===")
-        print("Finish Reason:", candidate.get('finishReason', 'Unknown'))
-        if 'safetyRatings' in candidate:
-             print("Safety Ratings:", candidate['safetyRatings'])
-        exit(1)
+        # Handle Transient Errors (503 Service Unavailable or 429 Too Many Requests)
+        elif gemini_res.status_code in [503, 429]:
+            wait_time = retry_delay * (2 ** attempt)
+            print(f"API Busy/Overloaded ({gemini_res.status_code}). Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})")
+            time.sleep(wait_time)
+            continue
+        
+        # Handle Fatal Errors
+        else:
+            print(f"\n=== HTTP ERROR {gemini_res.status_code} ===")
+            print(gemini_res.text)
+            exit(1)
 
-    script = candidate['content']['parts'][0]['text'].strip()
-    print("\n=== AI GENERATED SCRIPT ===")
-    print(script)
-    print("===========================\n")
-    
-except Exception as e:
-    print("Gemini API Request Execution Failed:", e)
+    except Exception as e:
+        wait_time = retry_delay * (2 ** attempt)
+        print(f"Connection Error: {e}. Retrying in {wait_time}s...")
+        time.sleep(wait_time)
+
+if not script:
+    print("Failed to get a response from Gemini after 3 retries. The server is likely under heavy load. Try again in a few minutes.")
     exit(1)
+
+print("\n=== AI GENERATED SCRIPT ===")
+print(script)
+print("===========================\n")
 
 print("[4] Generating Fast-Paced Audio via Kokoro TTS...")
 if not os.path.exists("kokoro-v0_19.onnx"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx", "kokoro-v0_19.onnx")
-
-# Use voices.bin to fix the NumPy Pickle Error
 if not os.path.exists("voices.bin"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.bin", "voices.bin")
 
 kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
-
 sentences =[s.strip() for s in re.split(r'(?<=[.!?]) +|\n+', script) if s.strip()]
 audio_pieces =[]
 sample_rate = 24000
@@ -173,7 +153,7 @@ for sentence in sentences:
         samples, sr = kokoro.create(sentence, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
         audio_pieces.append(samples)
     except Exception as e:
-        print(f"Skipped TTS for chunk: {sentence[:20]}... Error: {e}")
+        print(f"Skipped TTS chunk: {e}")
 
 final_audio = np.concatenate(audio_pieces)
 audio_path = "videos/temp/final_narration.wav"
@@ -184,34 +164,21 @@ with sf.SoundFile(audio_path) as f:
     total_audio_time = len(f) / f.samplerate
 
 time_per_panel = total_audio_time / len(panel_files)
-
 concat_file_path = "videos/temp/vid_list.txt"
+
 with open(concat_file_path, "w") as f:
     for pf in panel_files:
-        # Generate Absolute Paths to guarantee FFmpeg finds them
         abs_path = os.path.abspath(pf).replace('\\', '/')
         f.write(f"file '{abs_path}'\n")
         f.write(f"duration {time_per_panel:.2f}\n")
-    
-    # The last file needs to be added again without a duration per ffmpeg docs
-    last_path = os.path.abspath(panel_files[-1]).replace('\\', '/')
-    f.write(f"file '{last_path}'\n")
+    f.write(f"file '{os.path.abspath(panel_files[-1]).replace('\\', '/')}'\n")
 
 final_video_path = "videos/final_recap.mp4"
 ffmpeg_cmd =[
-    "ffmpeg", "-y", 
-    "-f", "concat", 
-    "-safe", "0", 
-    "-i", concat_file_path, 
-    "-i", audio_path, 
-    "-c:v", "libx264", 
-    "-pix_fmt", "yuv420p", 
-    "-c:a", "aac", 
-    "-b:a", "192k", 
-    "-shortest", final_video_path
+    "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_file_path, 
+    "-i", audio_path, "-c:v", "libx264", "-pix_fmt", "yuv420p", 
+    "-c:a", "aac", "-b:a", "192k", "-shortest", final_video_path
 ]
 
-# FFmpeg runs in standard directory. os.rename is removed.
 subprocess.run(ffmpeg_cmd)
-
-print(f"[+] Success! Video completely generated at {final_video_path}")
+print(f"[+] Success! Video generated at {final_video_path}")
