@@ -18,16 +18,21 @@ CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 
 # --- API KEY ROTATION SETUP ---
 # Put all your keys here. It will cycle through them if it hits a rate limit.
-GEMINI_API_KEYS =[
-    os.environ.get("GEMINI_API_KEY_1", "YOUR_API_KEY_1_HERE"),
-    os.environ.get("GEMINI_API_KEY_2", "YOUR_API_KEY_2_HERE"),
-    os.environ.get("GEMINI_API_KEY_3", "YOUR_API_KEY_3_HERE")
-]
-# Filter out empty strings
-GEMINI_API_KEYS =[k for k in GEMINI_API_KEYS if k and k != "YOUR_API_KEY_1_HERE" and "YOUR_API_KEY" not in k]
+GEMINI_API_KEYS = []
+i = 1
+
+while True:
+    key = os.environ.get(f"GEMINI_API_KEY_{i}")
+    if not key:
+        break
+    GEMINI_API_KEYS.append(key)
+    i += 1
+
+# Optional: filter out placeholders if you still want that safety
+GEMINI_API_KEYS = [k for k in GEMINI_API_KEYS if "YOUR_API_KEY" not in k]
 
 VOICE_MODEL = "am_adam"
-AUDIO_SPEED = 1.25
+AUDIO_SPEED = 1
 
 if not GEMINI_API_KEYS:
     print("ERROR: No GEMINI API KEYS provided. Please add them to the GEMINI_API_KEYS list.")
