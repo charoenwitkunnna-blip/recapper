@@ -16,27 +16,24 @@ from kokoro_onnx import Kokoro
 # ================= CONFIGURATION =================
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 
-# --- API KEY ROTATION SETUP ---
-# Put all your keys here. It will cycle through them if it hits a rate limit.
-GEMINI_API_KEYS = []
-i = 1
-
-while True:
-    key = os.environ.get(f"GEMINI_API_KEY_{i}")
-    if not key:
-        break
-    GEMINI_API_KEYS.append(key)
-    i += 1
-
-# Optional: filter out placeholders if you still want that safety
-GEMINI_API_KEYS = [k for k in GEMINI_API_KEYS if "YOUR_API_KEY" not in k]
+# --- DYNAMIC API KEY EXTRACTION ---
+# This will automatically find GEMINI_API_KEY, GEMINI_API_KEY_1, GEMINI_API_KEY_SECRET, etc.
+GEMINI_API_KEYS =[]
+for key, value in os.environ.items():
+    if key.startswith("GEMINI") and "API_KEY" in key and value.strip():
+        # Exclude dummy placeholder strings if they accidentally get pulled
+        if "YOUR_API_KEY" not in value:
+            GEMINI_API_KEYS.append(value.strip())
 
 VOICE_MODEL = "am_adam"
-AUDIO_SPEED = 1
+AUDIO_SPEED = 1.25
 
 if not GEMINI_API_KEYS:
-    print("ERROR: No GEMINI API KEYS provided. Please add them to the GEMINI_API_KEYS list.")
+    print("ERROR: No GEMINI API KEYS provided in environment variables.")
+    print("Please ensure your secrets are set (e.g., GEMINI_API_KEY_1).")
     exit(1)
+else:
+    print(f"[i] Successfully loaded {len(GEMINI_API_KEYS)} API Key(s) for rotation.")
 # =================================================
 
 print(f"[1] Loading Manhwa URL: {CHAPTER_URL}")
@@ -65,7 +62,7 @@ if not image_urls:
 # Directories setup
 os.makedirs("videos/temp", exist_ok=True)
 os.makedirs("videos/raw_strips", exist_ok=True)
-os.makedirs("characters", exist_ok=True) # --- NEW FOLDER FOR CHARACTERS ---
+os.makedirs("characters", exist_ok=True)
 
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
@@ -122,7 +119,6 @@ for idx, img_url in enumerate(image_urls):
 print(f"[+] Successfully prepared Super Rulers.")
 print("[3] Asking AI to Profile Characters, Crop Panels & Script the Recap...")
 
-# --- UPDATED PROMPT INTEGRATING YOUR EXACT SCRIPTWRITER RULES ---
 prompt_text = """You are a professional scriptwriter and highly successful YouTube Shorts Manhwa recap Director.
 I have provided you with chronological Manhwa strips. On the left side of EVERY image is a Super Ruler.
 
@@ -164,18 +160,18 @@ payload = {
     "generationConfig": {"responseMimeType": "application/json"}
 }
 
-max_retries = 10
+max_retries = 15 # Plenty of attempts allowed in case keys are burned out
 retry_delay = 5 
 script_data = None
 current_key_idx = 0
 
-# --- API KEY ROTATION & RETRY LOGIC ---
+# --- ROBUST API KEY ROTATION ---
 for attempt in range(max_retries):
     api_key = GEMINI_API_KEYS[current_key_idx]
     gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
     
+    print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx}...")
     try:
-        print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx}...")
         gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
         
         if gemini_res.status_code == 200:
@@ -184,34 +180,36 @@ for attempt in range(max_retries):
                 raw_text = gemini_data['candidates'][0]['content']['parts'][0]['text'].strip()
                 try:
                     script_data = json.loads(raw_text)
+                    print("[+] Successfully generated script!")
                     break 
                 except json.JSONDecodeError:
-                    print(f"Failed to parse AI JSON. Retrying...")
+                    print("[-] Failed to parse AI JSON. Retrying...")
+                    time.sleep(retry_delay)
                     
-        elif gemini_res.status_code in[429, 503]:
-            print(f"HTTP {gemini_res.status_code}: Rate limit or overloaded.")
-            # ROTATE KEY ON RATE LIMIT
+        elif gemini_res.status_code in[429, 503, 400]:
+            print(f"[-] HTTP {gemini_res.status_code}: API Error or Rate Limit.")
+            # ROTATE KEY
             current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
             print(f"-> Switching to API Key {current_key_idx}...")
             time.sleep(retry_delay)
-            continue
         else:
-            print(f"HTTP ERROR {gemini_res.status_code}: {gemini_res.text}")
-            # Switch keys on other failures too just in case it's a quota issue
+            print(f"[-] HTTP ERROR {gemini_res.status_code}: {gemini_res.text}")
             current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
+            print(f"-> Switching to API Key {current_key_idx}...")
             time.sleep(retry_delay)
             
     except Exception as e:
-        print(f"Exception during request: {e}")
+        print(f"[-] Exception during request: {e}")
         current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
+        print(f"-> Switching to API Key {current_key_idx}...")
         time.sleep(retry_delay)
 
 if not script_data or "panels" not in script_data:
-    print("Failed to get valid JSON from Gemini after all retries.")
+    print("FATAL ERROR: Failed to get valid JSON from Gemini after all retries and key rotations.")
     exit(1)
 
 # --- EXTRACT & SAVE CHARACTER DATA ---
-characters = script_data.get("characters",[])
+characters = script_data.get("characters", [])
 panels = script_data.get("panels",[])
 
 if characters:
@@ -235,7 +233,7 @@ if not os.path.exists("voices.bin"):
 kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
 sample_rate = 24000
 
-concat_lines =[]
+concat_lines = []
 final_audio_pieces =[]
 TARGET_W, TARGET_H = 1080, 1920
 
@@ -293,6 +291,7 @@ if not concat_lines:
     print("Error: No valid scenes generated.")
     exit(1)
 
+# Repeat the last frame to prevent it from cutting off instantly at the end of the video
 concat_lines.append(concat_lines[-2])
 
 audio_path = "videos/temp/final_narration.wav"
