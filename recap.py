@@ -183,7 +183,7 @@ current_key_idx = 0
 for attempt in range(max_retries):
     api_key = GEMINI_API_KEYS[current_key_idx]
     
-    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
     
     print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx} ({found_key_names[current_key_idx]})...")
     try:
