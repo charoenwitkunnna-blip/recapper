@@ -1,26 +1,27 @@
 from seleniumbase import SB
 from PIL import Image
-from gtts import gTTS
 import io
 import base64
 import requests
 import os
 import time
 import subprocess
+import urllib.request
+import re
+import numpy as np
+import soundfile as sf
+from kokoro_onnx import Kokoro
 
+# ================= CONFIGURATION =================
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
-MEMORY_FILE = "videos/memory/characters.txt"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+VOICE_MODEL = "am_adam" # Kokoro Voice (am_adam = American Male, af_bella = American Female)
+AUDIO_SPEED = 1.25 # Fast-paced YouTube style
 
-def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "r") as f:
-            return f.read().strip()
-    return "No characters logged yet."
-
-def save_memory(memory_text):
-    os.makedirs(os.path.dirname(MEMORY_FILE), exist_ok=True)
-    with open(MEMORY_FILE, "w") as f:
-        f.write(memory_text)
+if not GEMINI_API_KEY:
+    print("ERROR: GEMINI_API_KEY environment variable not set.")
+    exit(1)
+# =================================================
 
 def split_into_panels(img, min_gap=30):
     gray = img.convert("L")
@@ -50,28 +51,17 @@ def split_into_panels(img, min_gap=30):
         top, bottom = split_y_positions[i], split_y_positions[i+1]
         if bottom - top > 150: 
             panel = img.crop((0, top, width, bottom))
-            if panel.height > 2500:
+            if panel.height > 2500: # Split extremely tall panels
                 panels.append(panel.crop((0, 0, panel.width, panel.height//2)))
                 panels.append(panel.crop((0, panel.height//2, panel.width, panel.height)))
             else:
                 panels.append(panel)
     return panels if panels else [img]
 
-def call_vision_ai(prompt, image_b64):
-    try:
-        res = requests.post("http://localhost:11434/api/generate", json={
-            "model": "minicpm-v", 
-            "prompt": prompt, 
-            "images": [image_b64], 
-            "stream": False
-        }, timeout=300)
-        return res.json().get('response', '').strip()
-    except Exception as e:
-        return ""
-
-print(f"Loading: {CHAPTER_URL}")
+print(f"[1] Loading Manhwa URL: {CHAPTER_URL}")
 image_urls, site_cookies =[], {}
 
+# Scrape Image URLs
 with SB(uc=True, xvfb=True, locale_code="en") as sb:
     sb.uc_open_with_reconnect(CHAPTER_URL, reconnect_time=6)
     try: sb.uc_gui_click_captcha()
@@ -88,18 +78,18 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
     for cookie in sb.driver.get_cookies():
         site_cookies[cookie['name']] = cookie['value']
 
-if not image_urls: exit(1)
+if not image_urls: 
+    print("Failed to find images.")
+    exit(1)
 
 os.makedirs("videos/temp", exist_ok=True)
-os.makedirs("videos/memory", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
-video_files, story_context = [],[]
+base64_panels =[]
+panel_files = []
 
-save_memory("No characters logged yet.")
-
-for idx, img_url in enumerate(image_urls):
-    if idx > 0: break # Testing: only first strip
-
+print("[2] Downloading and Processing Panels...")
+# NOTE: Removed 'break' test limit to process full chapter
+for idx, img_url in enumerate(image_urls): 
     img_response = requests.get(img_url, headers=headers, cookies=site_cookies)
     if img_response.status_code != 200: continue
 
@@ -107,97 +97,107 @@ for idx, img_url in enumerate(image_urls):
     panels = split_into_panels(image, min_gap=30)
 
     for p_idx, panel in enumerate(panels):
-        print(f"\n  -> Processing Panel {p_idx+1}/{len(panels)}...")
+        # Resize to max 768px width to save API payload size
+        if panel.width > 768:
+            panel = panel.resize((768, int(panel.height * (768 / panel.width))), Image.Resampling.LANCZOS)
         
-        if panel.width > 800:
-            panel = panel.resize((800, int(panel.height * (800 / panel.width))), Image.Resampling.LANCZOS)
-        
-        img_path = f"videos/temp/panel_{p_idx}.jpg"
-        panel.save(img_path, format="JPEG")
+        img_path = f"videos/temp/panel_{idx}_{p_idx}.jpg"
+        panel.save(img_path, format="JPEG", quality=80)
+        panel_files.append(img_path)
 
         buffered = io.BytesIO()
-        panel.save(buffered, format="JPEG")
-        encoded_string = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        panel.save(buffered, format="JPEG", quality=75)
+        base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
 
-        # ==========================================
-        # PASS 1: The Director (Categorize Faces & OCR)
-        # ==========================================
-        print("     [Director] Identifying characters and reading text...")
-        current_memory = load_memory()
-        
-        director_prompt = f"""You are an anime character tracker and OCR reader. 
-        Current Character Database: {current_memory}
-        
-        Look at the image and do TWO things:
-        1. Identify the characters. If they are in the database, use their name. If they are new, invent a descriptive name for them (e.g., "Blue-Haired Boy") and add them to the database.
-        2. Read all text inside speech bubbles or boxes.
+print(f"[3] Sending {len(base64_panels)} Panels to Gemini Flash Latest...")
 
-        Format your reply EXACTLY like this:
-        [PRESENT]
-        (list the characters in the image here)
-        [TEXT]
-        (write the spoken dialogue here, or 'None')
-        [DATABASE]
-        (write the updated character database here)
-        """
-        
-        director_output = call_vision_ai(director_prompt, encoded_string)
-        
-        # Safely parse the director's output
-        present_chars, speech_text, new_db = "Unknown", "None", current_memory
-        if "[PRESENT]" in director_output and "[TEXT]" in director_output:
-            try:
-                present_chars = director_output.split("[TEXT]")[0].replace("[PRESENT]", "").strip()
-                remainder = director_output.split("[TEXT]")[1]
-                if "[DATABASE]" in remainder:
-                    speech_text = remainder.split("[DATABASE]")[0].strip()
-                    new_db = remainder.split("[DATABASE]")[1].strip()
-                    save_memory(new_db)
-            except: pass
+# --- THE ADVANCED YOUTUBE RECAP PROMPT ---
+prompt_text = """You are a professional scriptwriter for a highly successful YouTube Manhwa/Manga recap channel. Your task is to transform the provided chapter images into a highly detailed, engaging, and chronological recap script.
 
-        print(f"     -> Characters: {present_chars}")
-        print(f"     -> Dialogue: {speech_text}")
+STRICT RULES:
+1. NO MARKDOWN: You are strictly forbidden from using Markdown formatting. Output ONLY plain text with normal paragraph breaks. No asterisks, bolding, italics, hash symbols, or bullet points.
+2. BE EXTREMELY DETAILED: Walk through the chapter chronologically. Do not gloss over the middle. Capture every major plot beat, fight sequence, magic spell, inner thought, and lore reveal step-by-step.
+3. YOUTUBE RECAP VOCABULARY: Use high-energy, dynamic, and modern recap language. Inject action-packed verbs and slang like "blitzes", "tanks the hit", "flexes his aura", "drops a bombshell", "absolute menace", or "OP". Tell the story as if you are passionately explaining an awesome manhwa.
+4. BAN ON REPETITIVE NAMING ("OUR MC"): You are STRICTLY FORBIDDEN from using the phrase "our MC" more than ONCE in the entire script. You must constantly rotate how you address the main character. Use their actual name, pronouns, or creative aliases (e.g., "the protagonist", "our guy", "the ruthless assassin", "the magic student", "the boy").
+5. ADVANCED TRANSITIONS: Do not start sentences with basic words like "Then", "Suddenly", "After that", or "But". Use fluid, engaging transitions (e.g., "Without hesitation," "Refusing to back down," "Cutting through the tension," "Moments later," "Against all odds,").
+6. PARAPHRASE DIALOGUE & THOUGHTS: Do not use standard dialogue formatting or quote marks. Weave spoken words and inner monologues directly into the narrative.
+7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
+8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe."""
 
-        # ==========================================
-        # PASS 2: The Writer (Narrative Generation)
-        # ==========================================
-        print("     [Writer] Looking at the image and drafting the script...")
-        recent_story = " ".join(story_context[-2:]) if story_context else "The story begins."
-        
-        writer_prompt = f"""You are a dramatic Manhwa narrator. Look at the action happening in this image.
-        
-        Here is what you need to know about the image:
-        - Characters present: {present_chars}
-        - Spoken Dialogue: {speech_text}
-        
-        Recent Story Context: {recent_story}
-        
-        Write EXACTLY ONE cinematic, dramatic sentence narrating the story. 
-        DO NOT describe the image. Just tell the story based on what the characters are doing.
-        Use the character names provided!
-        If the image is just an empty wall or logo, reply ONLY with: SKIP
-        """
-        
-        narrator_script = call_vision_ai(writer_prompt, encoded_string).replace("*", "").replace('"', '').strip()
+# Format payload for Gemini
+gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
+parts = [{"text": prompt_text}]
+for b64 in base64_panels:
+    parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64}})
 
-        # Build Video
-        if "SKIP" in narrator_script.upper() or len(narrator_script) < 10:
-            print("     [!] Panel skipped.")
-            continue
-            
-        print(f"     Narrator: {narrator_script}")
-        story_context.append(narrator_script)
+payload = {"contents": [{"parts": parts}]}
 
-        audio_path = f"videos/temp/audio_{p_idx}.mp3"
-        gTTS(text=narrator_script, lang='en', slow=False).save(audio_path)
-        video_path = f"videos/temp/video_{p_idx}.mp4"
-        subprocess.run(["ffmpeg", "-loop", "1", "-y", "-i", img_path, "-i", audio_path, "-c:v", "libx264", "-tune", "stillimage", "-c:a", "aac", "-b:a", "192k", "-pix_fmt", "yuv420p", "-shortest", video_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        video_files.append(video_path)
+try:
+    gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
+    gemini_data = gemini_res.json()
+    script = gemini_data['candidates'][0]['content']['parts'][0]['text'].strip()
+    print("\n=== AI GENERATED SCRIPT ===")
+    print(script)
+    print("===========================\n")
+except Exception as e:
+    print("Gemini API Request Failed:", e)
+    exit(1)
 
-# Stitching
-if video_files:
-    with open("videos/temp/vid_list.txt", "w") as f:
-        for vf in video_files: f.write(f"file '{os.path.basename(vf)}'\n")
-    final_path = "videos/final_recap.mp4"
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "videos/temp/vid_list.txt", "-c", "copy", final_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print(f"Success! Video at {final_path}")
+print("[4] Generating Fast-Paced Audio via Kokoro TTS...")
+# Setup Kokoro Models (Fast ONNX version)
+if not os.path.exists("kokoro-v0_19.onnx"):
+    urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx", "kokoro-v0_19.onnx")
+    urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.json", "voices.json")
+
+kokoro = Kokoro("kokoro-v0_19.onnx", "voices.json")
+
+# Split script into manageable sentences for TTS
+sentences = [s.strip() for s in re.split(r'(?<=[.!?]) +|\n+', script) if s.strip()]
+audio_pieces =[]
+sample_rate = 24000
+
+for sentence in sentences:
+    try:
+        samples, sr = kokoro.create(sentence, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+        audio_pieces.append(samples)
+    except Exception as e:
+        print(f"Skipped TTS for chunk: {sentence[:20]}... Error: {e}")
+
+final_audio = np.concatenate(audio_pieces)
+audio_path = "videos/temp/final_narration.wav"
+sf.write(audio_path, final_audio, sample_rate)
+
+print("[5] Stitching Fast-Paced Slideshow Video...")
+# Calculate exact duration per panel to match audio length perfectly
+with sf.SoundFile(audio_path) as f:
+    total_audio_time = len(f) / f.samplerate
+
+time_per_panel = total_audio_time / len(panel_files)
+
+concat_file_path = "videos/temp/vid_list.txt"
+with open(concat_file_path, "w") as f:
+    for pf in panel_files:
+        f.write(f"file '{os.path.basename(pf)}'\n")
+        f.write(f"duration {time_per_panel:.2f}\n")
+    # ffmpeg concat quirk: repeat the last file without a duration
+    f.write(f"file '{os.path.basename(panel_files[-1])}'\n")
+
+final_video_path = "videos/final_recap.mp4"
+ffmpeg_cmd =[
+    "ffmpeg", "-y", 
+    "-f", "concat", 
+    "-safe", "0", 
+    "-i", concat_file_path, 
+    "-i", audio_path, 
+    "-c:v", "libx264", 
+    "-pix_fmt", "yuv420p", 
+    "-c:a", "aac", 
+    "-b:a", "192k", 
+    "-shortest", final_video_path
+]
+
+subprocess.run(ffmpeg_cmd, cwd="videos/temp", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# Move video out of temp
+os.rename(f"videos/temp/final_recap.mp4", final_video_path)
+
+print(f"[+] Success! Video completely generated at {final_video_path}")
