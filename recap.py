@@ -62,7 +62,7 @@ for idx, img_url in enumerate(image_urls):
     image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
 
     # --- 1. Prepare Base64 for Gemini AI ---
-    # Sending the FULL WHOLE file without cropping or resizing
+    # Sending the FULL WHOLE file without cropping or resizing (Original setting kept)
     buffered = io.BytesIO()
     image.save(buffered, format="JPEG", quality=85)
     base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
@@ -104,6 +104,7 @@ STRICT RULES:
 7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
 8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe."""
 
+# Original model kept
 gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
 parts = [{"text": prompt_text}]
 for b64 in base64_panels:
@@ -113,13 +114,44 @@ payload = {"contents": [{"parts": parts}]}
 
 try:
     gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
+    
+    # NEW: First check if Google rejected the HTTP request entirely (e.g. 400 Bad Request, Payload Too Large)
+    if gemini_res.status_code != 200:
+        print(f"\n=== HTTP ERROR {gemini_res.status_code} ===")
+        print(gemini_res.text)
+        exit(1)
+
     gemini_data = gemini_res.json()
-    script = gemini_data['candidates'][0]['content']['parts'][0]['text'].strip()
+    
+    # NEW: Catch JSON-level Google API errors
+    if 'error' in gemini_data:
+        print("\n=== GEMINI API ERROR ===")
+        print(gemini_data['error'].get('message', gemini_data['error']))
+        exit(1)
+        
+    # NEW: Check if 'candidates' exists at all
+    if 'candidates' not in gemini_data:
+        print("\n=== UNEXPECTED GEMINI RESPONSE ===")
+        print(gemini_data)
+        exit(1)
+        
+    candidate = gemini_data['candidates'][0]
+    
+    # NEW: Catch Content/Safety filter blocks
+    if 'content' not in candidate:
+        print("\n=== CONTENT BLOCKED BY SAFETY FILTERS ===")
+        print("Finish Reason:", candidate.get('finishReason', 'Unknown'))
+        if 'safetyRatings' in candidate:
+             print("Safety Ratings:", candidate['safetyRatings'])
+        exit(1)
+
+    script = candidate['content']['parts'][0]['text'].strip()
     print("\n=== AI GENERATED SCRIPT ===")
     print(script)
     print("===========================\n")
+    
 except Exception as e:
-    print("Gemini API Request Failed:", e)
+    print("Gemini API Request Execution Failed:", e)
     exit(1)
 
 print("[4] Generating Fast-Paced Audio via Kokoro TTS...")
