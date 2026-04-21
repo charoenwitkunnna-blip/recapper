@@ -17,15 +17,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama/models
-          key: ollama-moondream-llama3
+          key: ollama-moondream-llama3-3b
 
       - name: Install and Start Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve &
           sleep 5
-          ollama pull moondream      # Vision model (Eyes)
-          ollama pull llama3.2:1b    # Text model (Writer)
+          ollama pull moondream   
+          ollama pull llama3.2     # <-- UPGRADED: 3B parameter model, much smarter
 
       - name: Set up Python
         uses: actions/setup-python@v4
