@@ -23,41 +23,6 @@ if not GEMINI_API_KEY:
     exit(1)
 # =================================================
 
-def split_into_panels(img, min_gap=30):
-    gray = img.convert("L")
-    width, height = gray.size
-    pixels = gray.load()
-    split_y_positions = [0]
-    consecutive_empty_rows = 0
-    gap_start_y = 0
-
-    for y in range(height):
-        row_samples = [pixels[x, y] for x in range(0, width, 10)]
-        if not row_samples: continue
-        min_val, max_val = min(row_samples), max(row_samples)
-        is_empty_row = (max_val - min_val < 15)
-
-        if is_empty_row:
-            if consecutive_empty_rows == 0: gap_start_y = y
-            consecutive_empty_rows += 1
-        else:
-            if consecutive_empty_rows >= min_gap:
-                split_y_positions.append(gap_start_y + (consecutive_empty_rows // 2))
-            consecutive_empty_rows = 0
-
-    split_y_positions.append(height)
-    panels =[]
-    for i in range(len(split_y_positions) - 1):
-        top, bottom = split_y_positions[i], split_y_positions[i+1]
-        if bottom - top > 150: 
-            panel = img.crop((0, top, width, bottom))
-            if panel.height > 2500: # Split extremely tall panels
-                panels.append(panel.crop((0, 0, panel.width, panel.height//2)))
-                panels.append(panel.crop((0, panel.height//2, panel.width, panel.height)))
-            else:
-                panels.append(panel)
-    return panels if panels else [img]
-
 print(f"[1] Loading Manhwa URL: {CHAPTER_URL}")
 image_urls, site_cookies =[], {}
 
@@ -84,32 +49,51 @@ if not image_urls:
 
 os.makedirs("videos/temp", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
-base64_panels =[]
-panel_files = []
+base64_panels = []
+panel_files =[]
 
-print("[2] Downloading and Processing Panels...")
-# NOTE: Removed 'break' test limit to process full chapter
+print(f"[2] Downloading and Processing {len(image_urls)} Full Strips...")
+
+# Process the uncut strips directly
 for idx, img_url in enumerate(image_urls): 
     img_response = requests.get(img_url, headers=headers, cookies=site_cookies)
     if img_response.status_code != 200: continue
 
     image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
-    panels = split_into_panels(image, min_gap=30)
 
-    for p_idx, panel in enumerate(panels):
-        # Resize to max 768px width to save API payload size
-        if panel.width > 768:
-            panel = panel.resize((768, int(panel.height * (768 / panel.width))), Image.Resampling.LANCZOS)
-        
-        img_path = f"videos/temp/panel_{idx}_{p_idx}.jpg"
-        panel.save(img_path, format="JPEG", quality=80)
-        panel_files.append(img_path)
+    # --- 1. Prepare Base64 for Gemini AI ---
+    # We keep the strip uncut, but scale width to max 768px to prevent huge API payload sizes
+    gemini_img = image.copy()
+    if gemini_img.width > 768:
+        gemini_img = gemini_img.resize((768, int(gemini_img.height * (768 / gemini_img.width))), Image.Resampling.LANCZOS)
+    
+    buffered = io.BytesIO()
+    gemini_img.save(buffered, format="JPEG", quality=75)
+    base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
 
-        buffered = io.BytesIO()
-        panel.save(buffered, format="JPEG", quality=75)
-        base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
+    # --- 2. Prepare Image for FFMPEG Video ---
+    # ffmpeg 'concat' requires all images to be the exact same resolution.
+    # We place the long strip onto a standard vertical video canvas (1080x1920)
+    TARGET_W, TARGET_H = 1080, 1920
+    bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0)) # Black background
+    
+    # Scale image to fit within the 1080x1920 canvas without stretching
+    scale = min(TARGET_W / image.width, TARGET_H / image.height)
+    new_w = int(image.width * scale)
+    new_h = int(image.height * scale)
+    
+    video_img = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    
+    # Paste the strip perfectly in the center of the canvas
+    x_offset = (TARGET_W - new_w) // 2
+    y_offset = (TARGET_H - new_h) // 2
+    bg.paste(video_img, (x_offset, y_offset))
+    
+    img_path = f"videos/temp/strip_{idx}.jpg"
+    bg.save(img_path, format="JPEG", quality=90)
+    panel_files.append(img_path)
 
-print(f"[3] Sending {len(base64_panels)} Panels to Gemini Flash Latest...")
+print(f"[3] Sending {len(base64_panels)} Full Strips to Gemini Flash Latest...")
 
 # --- THE ADVANCED YOUTUBE RECAP PROMPT ---
 prompt_text = """You are a professional scriptwriter for a highly successful YouTube Manhwa/Manga recap channel. Your task is to transform the provided chapter images into a highly detailed, engaging, and chronological recap script.
@@ -124,7 +108,6 @@ STRICT RULES:
 7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
 8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe."""
 
-# Format payload for Gemini
 gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
 parts = [{"text": prompt_text}]
 for b64 in base64_panels:
@@ -144,14 +127,12 @@ except Exception as e:
     exit(1)
 
 print("[4] Generating Fast-Paced Audio via Kokoro TTS...")
-# Setup Kokoro Models (Fast ONNX version)
 if not os.path.exists("kokoro-v0_19.onnx"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx", "kokoro-v0_19.onnx")
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.json", "voices.json")
 
 kokoro = Kokoro("kokoro-v0_19.onnx", "voices.json")
 
-# Split script into manageable sentences for TTS
 sentences = [s.strip() for s in re.split(r'(?<=[.!?]) +|\n+', script) if s.strip()]
 audio_pieces =[]
 sample_rate = 24000
@@ -168,7 +149,6 @@ audio_path = "videos/temp/final_narration.wav"
 sf.write(audio_path, final_audio, sample_rate)
 
 print("[5] Stitching Fast-Paced Slideshow Video...")
-# Calculate exact duration per panel to match audio length perfectly
 with sf.SoundFile(audio_path) as f:
     total_audio_time = len(f) / f.samplerate
 
@@ -179,7 +159,6 @@ with open(concat_file_path, "w") as f:
     for pf in panel_files:
         f.write(f"file '{os.path.basename(pf)}'\n")
         f.write(f"duration {time_per_panel:.2f}\n")
-    # ffmpeg concat quirk: repeat the last file without a duration
     f.write(f"file '{os.path.basename(panel_files[-1])}'\n")
 
 final_video_path = "videos/final_recap.mp4"
@@ -197,7 +176,6 @@ ffmpeg_cmd =[
 ]
 
 subprocess.run(ffmpeg_cmd, cwd="videos/temp", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-# Move video out of temp
 os.rename(f"videos/temp/final_recap.mp4", final_video_path)
 
 print(f"[+] Success! Video completely generated at {final_video_path}")
