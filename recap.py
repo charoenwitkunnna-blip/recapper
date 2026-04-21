@@ -13,7 +13,7 @@ import soundfile as sf
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
-CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
+CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 VOICE_MODEL = "am_adam" # Kokoro Voice (am_adam = American Male, af_bella = American Female)
 AUDIO_SPEED = 1.25 # Fast-paced YouTube style
@@ -26,7 +26,6 @@ if not GEMINI_API_KEY:
 print(f"[1] Loading Manhwa URL: {CHAPTER_URL}")
 image_urls, site_cookies =[], {}
 
-# Scrape Image URLs
 with SB(uc=True, xvfb=True, locale_code="en") as sb:
     sb.uc_open_with_reconnect(CHAPTER_URL, reconnect_time=6)
     try: sb.uc_gui_click_captcha()
@@ -50,9 +49,11 @@ if not image_urls:
 os.makedirs("videos/temp", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 base64_panels = []
-panel_files =[]
+panel_files = []
 
-print(f"[2] Downloading and Processing {len(image_urls)} Full Strips...")
+print(f"[2] Downloading and Slicing {len(image_urls)} Full Strips into Screen-Sized Scenes...")
+
+TARGET_W, TARGET_H = 1080, 1920
 
 for idx, img_url in enumerate(image_urls): 
     try:
@@ -61,27 +62,40 @@ for idx, img_url in enumerate(image_urls):
 
         image = Image.open(io.BytesIO(img_response.content)).convert('RGB')
 
-        # Prepare Base64 for Gemini AI (Full Size)
+        # --- 1. Prepare Base64 for Gemini AI (Kept Full Size per your request) ---
         buffered = io.BytesIO()
         image.save(buffered, format="JPEG", quality=85)
         base64_panels.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
 
-        # Prepare Image for FFMPEG Video
-        TARGET_W, TARGET_H = 1080, 1920
-        bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0)) 
-        
-        scale = min(TARGET_W / image.width, TARGET_H / image.height)
-        new_w = int(image.width * scale)
+        # --- 2. Chop the massive strip into multiple 1080x1920 video scenes ---
+        # First, scale the width to perfectly fit the video screen (1080px)
+        scale = TARGET_W / image.width
         new_h = int(image.height * scale)
-        video_img = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        video_img = image.resize((TARGET_W, new_h), Image.Resampling.LANCZOS)
         
-        x_offset = (TARGET_W - new_w) // 2
-        y_offset = (TARGET_H - new_h) // 2
-        bg.paste(video_img, (x_offset, y_offset))
+        # Now, slice the long strip vertically into perfectly framed 1920px tall chunks
+        current_y = 0
+        overlap = 200 # Slight overlap so we don't awkwardly cut dialogue bubbles in half
+        step = TARGET_H - overlap 
         
-        img_path = f"videos/temp/strip_{idx}.jpg"
-        bg.save(img_path, format="JPEG", quality=90)
-        panel_files.append(img_path)
+        while current_y < new_h:
+            # Crop a 1080x1920 section
+            box = (0, current_y, TARGET_W, min(current_y + TARGET_H, new_h))
+            slice_img = video_img.crop(box)
+            
+            # If we reach the bottom and the slice is too short, pad it with black to prevent FFmpeg crashes
+            if slice_img.height < TARGET_H:
+                bg = Image.new("RGB", (TARGET_W, TARGET_H), (0, 0, 0))
+                bg.paste(slice_img, (0, 0))
+                slice_img = bg
+            
+            scene_idx = len(panel_files)
+            img_path = f"videos/temp/scene_{scene_idx:04d}.jpg"
+            slice_img.save(img_path, format="JPEG", quality=90)
+            panel_files.append(img_path)
+            
+            current_y += step
+            
     except Exception as e:
         print(f"Error processing image {idx}: {e}")
 
@@ -89,6 +103,7 @@ if not base64_panels:
     print("No images were successfully processed.")
     exit(1)
 
+print(f"[+] Sliced into {len(panel_files)} distinct readable scenes!")
 print(f"[3] Sending {len(base64_panels)} Full Strips to Gemini Flash Latest...")
 
 prompt_text = """You are a professional scriptwriter for a highly successful YouTube Manhwa/Manga recap channel. Output ONLY plain text recap script. NO MARKDOWN. Be extremely detailed. Use high-energy language. Do not say 'our MC' more than once. Use fluid transitions. No fourth wall breaks."""
@@ -99,9 +114,8 @@ for b64 in base64_panels:
     parts.append({"inline_data": {"mime_type": "image/jpeg", "data": b64}})
 payload = {"contents": [{"parts": parts}]}
 
-# --- RETRY LOGIC WITH EXPONENTIAL BACKOFF ---
 max_retries = 3
-retry_delay = 5 # base seconds
+retry_delay = 5 
 script = None
 
 for attempt in range(max_retries):
@@ -116,13 +130,11 @@ for attempt in range(max_retries):
             else:
                 print(f"Error in JSON structure: {gemini_data}")
                 exit(1)
-        
         elif gemini_res.status_code in [503, 429]:
             wait_time = retry_delay * (2 ** attempt)
             print(f"API Busy ({gemini_res.status_code}). Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})")
             time.sleep(wait_time)
             continue
-        
         else:
             print(f"\n=== HTTP ERROR {gemini_res.status_code} ===")
             print(gemini_res.text)
@@ -162,21 +174,22 @@ final_audio = np.concatenate(audio_pieces)
 audio_path = "videos/temp/final_narration.wav"
 sf.write(audio_path, final_audio, 24000)
 
-print("[5] Stitching Fast-Paced Slideshow Video...")
+print("[5] Stitching Fast-Paced Synchronized Video...")
 with sf.SoundFile(audio_path) as f:
     total_audio_time = len(f) / f.samplerate
 
-time_per_panel = total_audio_time / len(panel_files)
+# SYNC LOGIC: Since the images progress chronologically and the audio script progresses chronologically, 
+# distributing the audio duration evenly across the dozens of slices creates a highly accurate, natural pacing.
+time_per_scene = total_audio_time / len(panel_files)
 concat_file_path = "videos/temp/vid_list.txt"
 
-# FIX: Define the absolute paths outside of the f-string curly braces to avoid backslash issues
 with open(concat_file_path, "w") as f:
     for pf in panel_files:
         abs_p = os.path.abspath(pf).replace('\\', '/')
         f.write(f"file '{abs_p}'\n")
-        f.write(f"duration {time_per_panel:.2f}\n")
+        f.write(f"duration {time_per_scene:.2f}\n")
     
-    # Add the last file again (standard FFmpeg concat requirement)
+    # Last file added again (FFmpeg concat requirement)
     last_abs_p = os.path.abspath(panel_files[-1]).replace('\\', '/')
     f.write(f"file '{last_abs_p}'\n")
 
@@ -188,4 +201,4 @@ ffmpeg_cmd =[
 ]
 
 subprocess.run(ffmpeg_cmd)
-print(f"[+] Success! Video generated at {final_video_path}")
+print(f"[+] Success! Synchronized Video generated at {final_video_path}")
