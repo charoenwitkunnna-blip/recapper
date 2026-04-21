@@ -17,27 +17,29 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ollama/models
-          key: ollama-qwen2.5-vl-3b
+          key: ollama-triple-ai-v1
 
       - name: Install and Start Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
-          ollama serve &
-          sleep 5
-          
-          # Pulling the new Qwen2.5-VL 3B Multimodal Model
-          ollama pull qwen2.5-vl:3b
+          sleep 10
+          # Eyes
+          ollama pull moondream
+          # Ears (OCR Vision)
+          ollama pull minicpm-v
+          # Brain (Narrative)
+          ollama pull llama3.2
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install System Dependencies & Tesseract OCR
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb ffmpeg tesseract-ocr
-          pip install seleniumbase requests pillow gtts pytesseract
+          sudo apt-get install -y xvfb ffmpeg
+          pip install seleniumbase requests pillow gtts
           seleniumbase install chromedriver
 
       - name: Run AI Video Recapper
@@ -50,13 +52,3 @@ jobs:
         with:
           name: recap-video
           path: videos/
-
-      - name: Commit and Push Recap
-        if: always()
-        run: |
-          git config --global user.name "AI Recapper Bot"
-          git config --global user.email "bot@github.com"
-          mkdir -p videos
-          git add videos/
-          git commit -m "Auto-generate Manhwa Recap Video" || echo "No changes"
-          git push
