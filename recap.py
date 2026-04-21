@@ -8,21 +8,8 @@ import os
 import time
 import subprocess
 import pytesseract
-import re
 
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
-MEMORY_FILE = "videos/memory/characters.txt"
-
-def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "r") as f:
-            return f.read().strip()
-    return "No characters encountered yet."
-
-def save_memory(memory_text):
-    os.makedirs(os.path.dirname(MEMORY_FILE), exist_ok=True)
-    with open(MEMORY_FILE, "w") as f:
-        f.write(memory_text)
 
 def split_into_panels(img, min_gap=30):
     gray = img.convert("L")
@@ -33,7 +20,7 @@ def split_into_panels(img, min_gap=30):
     gap_start_y = 0
 
     for y in range(height):
-        row_samples =[pixels[x, y] for x in range(0, width, 10)]
+        row_samples = [pixels[x, y] for x in range(0, width, 10)]
         if not row_samples: continue
         min_val, max_val = min(row_samples), max(row_samples)
         is_empty_row = (max_val - min_val < 15)
@@ -50,7 +37,7 @@ def split_into_panels(img, min_gap=30):
     panels =[]
     for i in range(len(split_y_positions) - 1):
         top, bottom = split_y_positions[i], split_y_positions[i+1]
-        if bottom - top > 150: 
+        if bottom - top > 100: 
             panel = img.crop((0, top, width, bottom))
             if panel.height > 2500:
                 panels.append(panel.crop((0, 0, panel.width, panel.height//2)))
@@ -71,6 +58,7 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
 
     sb.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(3)
+
     images = sb.find_elements("css selector", ".wp-manga-chapter-img")
     for img in images:
         src = img.get_attribute("data-src") or img.get_attribute("src")
@@ -81,15 +69,11 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
 if not image_urls: exit(1)
 
 os.makedirs("videos/temp", exist_ok=True)
-os.makedirs("videos/memory", exist_ok=True)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
-video_files =[]
-
-# Clear memory for a fresh start
-save_memory("No characters logged yet.")
+video_files, story_context = [],[]
 
 for idx, img_url in enumerate(image_urls):
-    if idx > 0: break # Testing: only first strip
+    if idx > 0: break # Process only first strip for testing
 
     img_response = requests.get(img_url, headers=headers, cookies=site_cookies)
     if img_response.status_code != 200: continue
@@ -112,94 +96,53 @@ for idx, img_url in enumerate(image_urls):
         panel.save(buffered, format="JPEG")
         encoded_string = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
-        # ==========================================
-        # STEP 1: EARS (Extract Text/Dialogue via OCR)
-        # ==========================================
+        # STEP 1: OCR TEXT GRAB
         ocr_text = pytesseract.image_to_string(panel).strip()
         ocr_text = " ".join([w for w in ocr_text.split() if len(w) > 1])
         if ocr_text: print(f"     [OCR] Found dialogue: {ocr_text}")
-        else: ocr_text = "No dialogue."
-
-        # ==========================================
-        # STEP 2: EYES (Moondream: Top-Tier Vision Analysis)
-        # ==========================================
-        print("     [Eyes] Moondream analyzing the visuals...")
-        vision_prompt = """You are an expert anime storyboard artist. Analyze this comic panel with extreme precision.
-        1. CHARACTERS: Detail exact hair color, clothing design, and facial expressions. 
-        2. ACTION: What exactly are they doing with their bodies/weapons right now?
-        3. EFFECTS/MOOD: Are there magic auras, speed lines, explosions, or dramatic shadows?
-        Output ONLY the raw visual facts. Do not invent names or guess the plot."""
         
-        try:
-            res_vision = requests.post("http://localhost:11434/api/generate", json={
-                "model": "moondream", "prompt": vision_prompt, "images":[encoded_string], "stream": False
-            }, timeout=300)
-            vision_text = res_vision.json().get('response', '').strip()
-        except Exception as e:
-            print(f"     [!] Vision AI failed: {e}")
-            continue
-
-        # ==========================================
-        # STEP 3 & 4: BRAIN & MOUTH (Llama 3.2: Memory & Epic Script)
-        # ==========================================
-        print("     [Brain] Llama 3.2 building memory & writing script...")
-        current_memory = load_memory()
+        # STEP 2: QWEN 2.5-VL ALL-IN-ONE PROMPT (Reverted to the old prompt)
+        recent_story = " ".join(story_context[-2:]) if story_context else "The story just began."
         
-        brain_prompt = f"""You are an elite, high-energy YouTube Shorts scriptwriter for an epic Manhwa channel.
+        qwen_prompt = f"""You are a strict, factual narrator recapping a Manhwa. Look at this image. 
 
-        [CURRENT CHARACTER DATABASE]
-        {current_memory}[NEW SCENE VISUALS]
-        {vision_text}
+        Context of the story so far: {recent_story}
+        Spoken dialogue in the image: {ocr_text if ocr_text else "No dialogue."}
 
-        [SPOKEN DIALOGUE (OCR)]
-        {ocr_text}
-
-        You must complete TWO Tasks:
-
-        TASK 1: Update the Character Database. 
-        - If a new character appears, assign them an alias (e.g., "The Silver-Haired Knight", "The Smiling Mage") and record their appearance and personality.
-        - If the OCR dialogue reveals their actual name, permanently update their alias to their real name!
-        - Keep the database concise but highly descriptive.
-
-        TASK 2: Write the Voiceover Script.
-        - Write EXACTLY ONE epic, high-adrenaline sentence narrating the action.
-        - Use names from your Character Database!
-        - Make it sound cinematic, dramatic, and intense. 
-        - DO NOT say "In this scene" or "The panel shows". Start directly with the action.
-        - If the visuals just show a logo, blank wall, or empty sky, the script should be exactly the word: SKIP
-
-        Format your response EXACTLY like this with the brackets:
-        [MEMORY]
-        (Your updated character database goes here)[SCRIPT]
-        (Your one epic sentence goes here)
+        Write EXACTLY ONE engaging sentence narrating what happens right now. 
+        
+        STRICT RULES:
+        1. DO NOT invent names! If the dialogue does not explicitly state a name, describe the characters purely by what you see in the image (e.g., "The blonde boy", "The man in the red cape").
+        2. DO NOT make up magic powers or background lore. Stick purely to the visual action.
+        3. Do not say "The image shows" or "In this panel".
+        4. If the image is just a blank wall, a logo, or empty space, reply ONLY with the word: SKIP
         """
 
         try:
-            res_brain = requests.post("http://localhost:11434/api/generate", json={
-                "model": "llama3.2", "prompt": brain_prompt, "stream": False
-            }, timeout=300)
-            brain_output = res_brain.json().get('response', '').strip()
-            
-            # Using Regex/String splitting to safely extract the data
-            if "[SCRIPT]" in brain_output:
-                parts = brain_output.split("[SCRIPT]")
-                new_memory = parts[0].replace("[MEMORY]", "").strip()
-                narrator_script = parts[1].strip()
-                save_memory(new_memory)
-            else:
-                narrator_script = brain_output
-                
+            # We are querying Qwen2.5-VL-3B now!
+            res = requests.post("http://localhost:11434/api/generate", json={
+                "model": "qwen2.5-vl:3b", 
+                "prompt": qwen_prompt, 
+                "images": [encoded_string],
+                "stream": False
+            }, timeout=300) # Kept timeout at 300s to avoid GitHub Actions timing out
+            narrator_script = res.json().get('response', '').strip()
+        except requests.exceptions.Timeout:
+            print("     [!] AI failed: Request Timed Out.")
+            continue
         except Exception as e: 
-            print(f"     [!] Brain AI failed: {e}")
+            print(f"     [!] AI failed: {e}")
             continue
 
         narrator_script = narrator_script.replace("*", "").replace('"', '').strip()
         if "SKIP" in narrator_script.upper() or len(narrator_script) < 10: 
+            print("     [!] Panel skipped.")
             continue
             
         print(f"     Narrator: {narrator_script}")
+        story_context.append(narrator_script)
 
-        # Build Video
+        # STEP 3: VIDEO BUILD
         audio_path = f"videos/temp/audio_{p_idx}.mp3"
         gTTS(text=narrator_script, lang='en', slow=False).save(audio_path)
         video_path = f"videos/temp/video_{p_idx}.mp4"
