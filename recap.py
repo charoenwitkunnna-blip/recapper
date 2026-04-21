@@ -18,12 +18,12 @@ CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 
 # --- DYNAMIC API KEY EXTRACTION ---
 GEMINI_API_KEYS = []
-found_key_names = []
+found_key_names =[]
 
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
 # Collect (index, key_name, value)
-temp_keys = []
+temp_keys =[]
 
 for key, value in os.environ.items():
     match = pattern.fullmatch(key)
@@ -183,8 +183,7 @@ current_key_idx = 0
 for attempt in range(max_retries):
     api_key = GEMINI_API_KEYS[current_key_idx]
     
-    # --- FIXED THE MODEL NAME HERE ---
-    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
     
     print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx} ({found_key_names[current_key_idx]})...")
     try:
@@ -202,9 +201,8 @@ for attempt in range(max_retries):
                     print("[-] Failed to parse AI JSON. Retrying...")
                     time.sleep(retry_delay)
                     
-        elif gemini_res.status_code in[429, 503, 400]:
+        elif gemini_res.status_code in [429, 503, 400]:
             print(f"[-] HTTP {gemini_res.status_code}: {gemini_res.text}")
-            # ROTATE KEY
             current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
             print(f"-> Switching to API Key {current_key_idx} ({found_key_names[current_key_idx]})...")
             time.sleep(retry_delay)
@@ -249,8 +247,7 @@ if not os.path.exists("voices.bin"):
 kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
 sample_rate = 24000
 
-concat_lines = []
-final_audio_pieces =[]
+concat_lines =[]
 TARGET_W, TARGET_H = 1080, 1920
 
 for i, block in enumerate(panels):
@@ -276,30 +273,66 @@ for i, block in enumerate(panels):
         
         cropped_panel = raw_img.crop((0, top_px, raw_img.width, bottom_px))
         
-        bg = cropped_panel.resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
-        bg = bg.filter(ImageFilter.GaussianBlur(35)) 
-        
-        scale = min(TARGET_W / cropped_panel.width, TARGET_H / cropped_panel.height)
-        new_w, new_h = int(cropped_panel.width * scale), int(cropped_panel.height * scale)
-        panel_scaled = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
-        
-        x_offset = (TARGET_W - new_w) // 2
-        y_offset = (TARGET_H - new_h) // 2
-        bg.paste(panel_scaled, (x_offset, y_offset))
-        
-        frame_path = f"videos/temp/final_frame_{i:04d}.jpg"
-        bg.save(frame_path, format="JPEG", quality=95)
-        
-        # Audio generation
+        # Audio generation for this specific scene
         samples, sr = kokoro.create(narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
-        final_audio_pieces.append(samples)
+        audio_path = f"videos/temp/audio_{i:04d}.wav"
+        sf.write(audio_path, samples, sample_rate)
         
         exact_duration = len(samples) / sample_rate
-        abs_frame_path = os.path.abspath(frame_path).replace('\\', '/')
+        frames = max(1, int(exact_duration * 30))
         
-        concat_lines.append(f"file '{abs_frame_path}'")
-        concat_lines.append(f"duration {exact_duration:.4f}")
+        aspect_ratio = cropped_panel.height / cropped_panel.width
+        frame_path = f"videos/temp/panel_{i:04d}.jpg"
+        scene_video_path = f"videos/temp/scene_{i:04d}.mp4"
         
+        # If the panel is tall/long, pan down smoothly
+        if aspect_ratio > 1.8:
+            print(f"   -> Scene {i:02d} | Long Panel Detected | Effect: Pan Down")
+            new_w = TARGET_W
+            new_h = max(TARGET_H, int(TARGET_W * aspect_ratio))
+            scaled_panel = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            scaled_panel.save(frame_path, format="JPEG", quality=95)
+            
+            ffmpeg_cmd =[
+                "ffmpeg", "-y", "-loop", "1", "-t", f"{exact_duration:.4f}",
+                "-i", frame_path, "-i", audio_path,
+                "-vf", f"crop=1080:1920:0:'(in_h-1920)*(t/{exact_duration})',format=yuv420p",
+                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "44100", 
+                "-pix_fmt", "yuv420p", "-r", "30", "-shortest",
+                scene_video_path
+            ]
+            
+        # If it's normal sized, create the blur background and zoom in
+        else:
+            print(f"   -> Scene {i:02d} | Normal Panel Detected | Effect: Zoom In")
+            bg = cropped_panel.resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
+            bg = bg.filter(ImageFilter.GaussianBlur(35)) 
+            
+            scale = min(TARGET_W / cropped_panel.width, TARGET_H / cropped_panel.height)
+            new_w, new_h = int(cropped_panel.width * scale), int(cropped_panel.height * scale)
+            panel_scaled = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
+            
+            x_offset = (TARGET_W - new_w) // 2
+            y_offset = (TARGET_H - new_h) // 2
+            bg.paste(panel_scaled, (x_offset, y_offset))
+            bg.save(frame_path, format="JPEG", quality=95)
+            
+            ffmpeg_cmd =[
+                "ffmpeg", "-y", 
+                "-i", frame_path, "-i", audio_path,
+                "-vf", f"zoompan=z='min(1.0+0.0015*n,1.3)':x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':d={frames}:s=1080x1920:fps=30,format=yuv420p",
+                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "44100", 
+                "-pix_fmt", "yuv420p", "-shortest",
+                scene_video_path
+            ]
+            
+        # Execute Scene Render secretly so it doesn't flood console
+        subprocess.run(ffmpeg_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        if os.path.exists(scene_video_path):
+            abs_scene_path = os.path.abspath(scene_video_path).replace('\\', '/')
+            concat_lines.append(f"file '{abs_scene_path}'")
+            
     except Exception as e:
         print(f"Skipped Scene {i} due to Error: {e}")
 
@@ -307,22 +340,18 @@ if not concat_lines:
     print("Error: No valid scenes generated.")
     exit(1)
 
-concat_lines.append(concat_lines[-2])
-
-audio_path = "videos/temp/final_narration.wav"
-sf.write(audio_path, np.concatenate(final_audio_pieces), sample_rate)
-
 concat_file_path = "videos/temp/vid_list.txt"
 with open(concat_file_path, "w") as f:
     f.write("\n".join(concat_lines) + "\n")
 
-print("[5] Rendering the Final Edited Masterpiece...")
+print("[5] Stitching the Final Edited Masterpiece...")
 final_video_path = "videos/final_recap.mp4"
+
+# Lossless concat demuxing
 ffmpeg_cmd =[
     "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_file_path, 
-    "-i", audio_path, "-c:v", "libx264", "-pix_fmt", "yuv420p", 
-    "-c:a", "aac", "-b:a", "192k", "-shortest", final_video_path
+    "-c", "copy", final_video_path
 ]
 
 subprocess.run(ffmpeg_cmd)
-print(f"[+] Success! Cinematic Synced Video generated at {final_video_path}")
+print(f"[+] Success! Cinematic Synced Video with Dynamic Camera Movements generated at {final_video_path}")
