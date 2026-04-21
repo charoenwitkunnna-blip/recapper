@@ -14,7 +14,7 @@ import json
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
-CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
+CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 VOICE_MODEL = "am_adam"
 AUDIO_SPEED = 1.25
@@ -145,7 +145,7 @@ You MUST return a pure JSON array of objects.[
 
 parts.insert(0, {"text": prompt_text})
 
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
 
 payload = {
     "contents": [{"parts": parts}],
