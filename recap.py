@@ -17,23 +17,25 @@ from kokoro_onnx import Kokoro
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-# This will automatically find GEMINI_API_KEY, GEMINI_API_KEY_1, GEMINI_API_KEY_SECRET, etc.
-GEMINI_API_KEYS =[]
+GEMINI_API_KEYS = []
+found_key_names =[]
+
 for key, value in os.environ.items():
-    if key.startswith("GEMINI") and "API_KEY" in key and value.strip():
-        # Exclude dummy placeholder strings if they accidentally get pulled
+    if "GEMINI" in key and "KEY" in key and value.strip():
+        # Exclude dummy placeholder strings
         if "YOUR_API_KEY" not in value:
             GEMINI_API_KEYS.append(value.strip())
+            found_key_names.append(key)
 
 VOICE_MODEL = "am_adam"
 AUDIO_SPEED = 1.25
 
 if not GEMINI_API_KEYS:
     print("ERROR: No GEMINI API KEYS provided in environment variables.")
-    print("Please ensure your secrets are set (e.g., GEMINI_API_KEY_1).")
+    print("Please ensure your secrets are set (e.g., export GEMINI_API_KEY_1='key').")
     exit(1)
 else:
-    print(f"[i] Successfully loaded {len(GEMINI_API_KEYS)} API Key(s) for rotation.")
+    print(f"[i] Successfully loaded {len(GEMINI_API_KEYS)} API Key(s) from: {', '.join(found_key_names)}")
 # =================================================
 
 print(f"[1] Loading Manhwa URL: {CHAPTER_URL}")
@@ -160,7 +162,7 @@ payload = {
     "generationConfig": {"responseMimeType": "application/json"}
 }
 
-max_retries = 15 # Plenty of attempts allowed in case keys are burned out
+max_retries = 15 
 retry_delay = 5 
 script_data = None
 current_key_idx = 0
@@ -168,9 +170,11 @@ current_key_idx = 0
 # --- ROBUST API KEY ROTATION ---
 for attempt in range(max_retries):
     api_key = GEMINI_API_KEYS[current_key_idx]
-    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={api_key}"
     
-    print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx}...")
+    # --- FIXED THE MODEL NAME HERE ---
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+    
+    print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx} ({found_key_names[current_key_idx]})...")
     try:
         gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
         
@@ -187,21 +191,21 @@ for attempt in range(max_retries):
                     time.sleep(retry_delay)
                     
         elif gemini_res.status_code in[429, 503, 400]:
-            print(f"[-] HTTP {gemini_res.status_code}: API Error or Rate Limit.")
+            print(f"[-] HTTP {gemini_res.status_code}: {gemini_res.text}")
             # ROTATE KEY
             current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
-            print(f"-> Switching to API Key {current_key_idx}...")
+            print(f"-> Switching to API Key {current_key_idx} ({found_key_names[current_key_idx]})...")
             time.sleep(retry_delay)
         else:
             print(f"[-] HTTP ERROR {gemini_res.status_code}: {gemini_res.text}")
             current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
-            print(f"-> Switching to API Key {current_key_idx}...")
+            print(f"-> Switching to API Key {current_key_idx} ({found_key_names[current_key_idx]})...")
             time.sleep(retry_delay)
             
     except Exception as e:
         print(f"[-] Exception during request: {e}")
         current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
-        print(f"-> Switching to API Key {current_key_idx}...")
+        print(f"-> Switching to API Key {current_key_idx} ({found_key_names[current_key_idx]})...")
         time.sleep(retry_delay)
 
 if not script_data or "panels" not in script_data:
@@ -209,7 +213,7 @@ if not script_data or "panels" not in script_data:
     exit(1)
 
 # --- EXTRACT & SAVE CHARACTER DATA ---
-characters = script_data.get("characters", [])
+characters = script_data.get("characters",[])
 panels = script_data.get("panels",[])
 
 if characters:
@@ -291,7 +295,6 @@ if not concat_lines:
     print("Error: No valid scenes generated.")
     exit(1)
 
-# Repeat the last frame to prevent it from cutting off instantly at the end of the video
 concat_lines.append(concat_lines[-2])
 
 audio_path = "videos/temp/final_narration.wav"
