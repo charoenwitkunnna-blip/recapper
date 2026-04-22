@@ -1,2 +1,0 @@
-(characters not present in the database, so it remains as initially listed)
-        (updated character database stays unchanged since no new characters are added or modified based on this image.)
