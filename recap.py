@@ -17,8 +17,8 @@ import math
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
-START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
-MAX_CHAPTERS_TO_PROCESS = 5 # Set this to 100 if you want it to run all night
+START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
+MAX_CHAPTERS_TO_PROCESS = 1 # Set this to 100 if you want it to run all night
 
 # --- DYNAMIC API KEY EXTRACTION ---
 GEMINI_API_KEYS = []
