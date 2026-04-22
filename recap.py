@@ -14,6 +14,7 @@ import json
 import concurrent.futures
 import shutil
 import math
+import threading
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
@@ -21,8 +22,6 @@ START_URL = "https://manhuaus.com/manga/echoes-of-the-reverse-planet/chapter-0/"
 MAX_CHAPTERS_TO_PROCESS = "all" 
 
 # --- VIDEO RESOLUTION SETTINGS ---
-# "Landscape" = 1920x1080 (Standard YouTube)
-# "Portrait" = 1080x1920 (TikTok / YouTube Shorts)
 VIDEO_FORMAT = "Landscape" 
 W = 1920 if VIDEO_FORMAT.lower() == "landscape" else 1080
 H = 1080 if VIDEO_FORMAT.lower() == "landscape" else 1920
@@ -31,11 +30,11 @@ H = 1080 if VIDEO_FORMAT.lower() == "landscape" else 1920
 VOICE_MODEL = "am_adam"  
 AUDIO_SPEED = 1.0         
 
-url_parts = [p for p in START_URL.split('/') if p]
+url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS =[]
+GEMINI_API_KEYS = []
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -82,6 +81,7 @@ if not os.path.exists("voices-v1.0.bin"):
 
 print("Loading Kokoro TTS Engine...")
 kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
+kokoro_lock = threading.Lock() # Prevents thread-crashing inside the espeak-ng TTS engine
 
 # ================= PARALLEL PANEL PROCESSOR =================
 def build_and_render_clip(i, block, temp_dir, original_files, ai_heights):
@@ -95,11 +95,22 @@ def build_and_render_clip(i, block, temp_dir, original_files, ai_heights):
     bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
     crop = raw.crop((0, top_px, raw.width, bottom_px))
     
-    narration_text = str(block.get('narration', '')).replace('\n', ' ').replace('\r', ' ').strip()
+    # Strip multiline bugs to prevent the Kokoro output mismatch error
+    narration_text = str(block.get('narration', ''))
+    narration_text = re.sub(r'[\n\r]+', ' ', narration_text)
+    narration_text = re.sub(r'\s+', ' ', narration_text).strip()
+    
     if not narration_text:
         narration_text = "..."
         
-    samples, _ = kokoro.create(narration_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+    try:
+        # Prevent Thread Collisions during inference phonemization 
+        with kokoro_lock:
+            samples, _ = kokoro.create(narration_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+    except Exception as e:
+        print(f"TTS Error on panel {i}: {e}. Creating silent audio.")
+        samples = np.zeros(24000) # 1 second silence fail-safe
+        
     audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
     sf.write(audio_path, samples, 24000)
     
@@ -114,17 +125,14 @@ def build_and_render_clip(i, block, temp_dir, original_files, ai_heights):
     aspect_ratio = crop.height / crop.width
     
     common_flags =["-c:v", "libx264", "-preset", "ultrafast", "-threads", "2", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
-    
     handled_as_pan = False
 
     # ---------------- DYNAMIC PAN CAMERA LOGIC ----------------
     if effect in['pan_down', 'pan_up'] and aspect_ratio > (H/W)*1.2:
-        # Scale the panel to 75% width on Landscape so the glass effect remains highly visible
         target_w = int(W * 0.75) if W > H else W
         scale_factor = target_w / crop.width
         target_h = int(crop.height * scale_factor)
         
-        # Safety constraint so massive panels don't crash FFmpeg (cap at 10x screen height)
         max_h = H * 10
         if target_h > max_h:
             target_h = max_h
@@ -133,28 +141,24 @@ def build_and_render_clip(i, block, temp_dir, original_files, ai_heights):
         if target_h > H:
             handled_as_pan = True
             
-            # Generate a massive tall canvas with the glass effect applied
             bg_w, bg_h = max(1, target_w//15), max(1, target_h//15) 
             tall_bg = crop.resize((bg_w, bg_h)).filter(ImageFilter.GaussianBlur(15)).resize((W, target_h))
             
-            # Paste the clean strip directly into the center of the tall canvas
             scaled_crop = crop.resize((target_w, target_h))
             tall_bg.paste(scaled_crop, ((W-target_w)//2, 0))
             tall_bg.save(f_path, quality=85)
             
-            # Slide a WxH camera window perfectly from top-to-bottom over the tall canvas
             speed = (target_h - H) / video_dur
             if effect == 'pan_down':
                 vf = f"crop={W}:{H}:0:min(in_h-{H}\\,{speed}*t),fps=30,setsar=1,format=yuv420p"
             else:
                 vf = f"crop={W}:{H}:0:max(0\\,(in_h-{H})-{speed}*t),fps=30,setsar=1,format=yuv420p"
                 
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", vf] + common_flags + [v_out]
+            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", vf] + common_flags +[v_out]
             subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
     # ---------------- STANDARD ZOOM LOGIC ----------------
     if not handled_as_pan:
-        # Generate the standard WxH resolution glass background
         bg_w_blur, bg_h_blur = max(1, W//15), max(1, H//15)
         bg = crop.resize((bg_w_blur, bg_h_blur)).filter(ImageFilter.GaussianBlur(15)).resize((W, H))
         
@@ -169,7 +173,7 @@ def build_and_render_clip(i, block, temp_dir, original_files, ai_heights):
         else: 
             vf = f"scale={scale_w}x{scale_h},zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={W}x{H}:fps=30,setsar=1,format=yuv420p"
         
-        cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", vf] + common_flags +[v_out]
+        cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", vf] + common_flags + [v_out]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
     return v_out
@@ -180,6 +184,8 @@ def process_chapter(chapter_url):
     
     url_parts =[p for p in chapter_url.split('/') if p]
     chapter_str = url_parts[-1] 
+    
+    # Strictly pull the whole number
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
 
@@ -195,20 +201,34 @@ def process_chapter(chapter_url):
     char_file = os.path.join(cast_dir, "characters.txt")
     highest_file = os.path.join(chapters_dir, "highest.txt")
     final_path = os.path.join(current_chap_dir, "video.mp4")
+    next_url_file = os.path.join(current_chap_dir, "next_url.txt")
 
+    # OPTIMIZED SKIPPING LOGIC (Bypasses loading Selenium)
     if os.path.exists(final_path):
         print(f"[{chap_num}] Video already exists in chapter folder! Skipping AI & Rendering to continue recap...")
         next_url = None
-        with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
-            sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
-            try: sb.uc_gui_click_captcha()
-            except: pass
-            try:
-                next_btn = sb.find_element("css selector", "a.next_page")
-                next_url = next_btn.get_attribute("href")
-            except: 
-                print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up!")
-                next_url = None
+        
+        # Read the URL instantly instead of wasting ~8 seconds parsing via chromium
+        if os.path.exists(next_url_file):
+            with open(next_url_file, "r", encoding="utf-8") as f:
+                next_url = f.read().strip()
+                if next_url.lower() == "none" or not next_url:
+                    next_url = None
+        else:
+            with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
+                sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
+                try: sb.uc_gui_click_captcha()
+                except: pass
+                try:
+                    next_btn = sb.find_element("css selector", "a.next_page")
+                    next_url = next_btn.get_attribute("href")
+                except: 
+                    print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up!")
+                    next_url = None
+            
+            with open(next_url_file, "w", encoding="utf-8") as f:
+                f.write(next_url if next_url else "None")
+                
         return next_url, True 
 
     existing_chars_text = ""
@@ -241,6 +261,10 @@ def process_chapter(chapter_url):
         except:
             print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up! No more new panels.")
             next_url = None
+
+    # Saves to disk instantly so Selenium isn't needed for this chapter in the future
+    with open(next_url_file, "w", encoding="utf-8") as f:
+        f.write(next_url if next_url else "None")
 
     print(f"[{chap_num}] Processing {len(image_urls)} Strips...")
     parts, original_files, ai_heights =[], {}, {}
@@ -382,6 +406,7 @@ def stitch_all_chapters():
     for d in chap_dirs:
         vid_path = os.path.join(chapters_dir, d, "video.mp4")
         if os.path.exists(vid_path):
+            # Strictly pull integer chapters as requested
             num_match = re.search(r'\d+', d)
             num = int(num_match.group(0)) if num_match else 0
             valid_chaps.append((num, vid_path))
@@ -421,7 +446,8 @@ while current_target:
     try:
         current_target, skipped = process_chapter(current_target)
         if not skipped:
-            processed += 1
+            processed += 1 
+            # Note: Using MAX_CHAPTERS effectively acts as a count of NEW chapters you want to process!
     except Exception as e:
         print(f"Error executing chapter: {e}")
         break
