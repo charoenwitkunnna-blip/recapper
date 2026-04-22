@@ -34,7 +34,7 @@ url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS = []
+GEMINI_API_KEYS =[]
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -201,35 +201,25 @@ def process_chapter(chapter_url):
     char_file = os.path.join(cast_dir, "characters.txt")
     highest_file = os.path.join(chapters_dir, "highest.txt")
     final_path = os.path.join(current_chap_dir, "video.mp4")
-    next_url_file = os.path.join(current_chap_dir, "next_url.txt")
 
-    # OPTIMIZED SKIPPING LOGIC (Bypasses loading Selenium)
+    # ================= RESUME CHECK (OLD RELIABLE METHOD) =================
     if os.path.exists(final_path):
-        print(f"[{chap_num}] Video already exists in chapter folder! Skipping AI & Rendering to continue recap...")
+        print(f"[{chap_num}] Video already exists! Skipping AI & Rendering to continue recap...")
         next_url = None
-        
-        # Read the URL instantly instead of wasting ~8 seconds parsing via chromium
-        if os.path.exists(next_url_file):
-            with open(next_url_file, "r", encoding="utf-8") as f:
-                next_url = f.read().strip()
-                if next_url.lower() == "none" or not next_url:
-                    next_url = None
-        else:
-            with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
-                sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
-                try: sb.uc_gui_click_captcha()
-                except: pass
-                try:
-                    next_btn = sb.find_element("css selector", "a.next_page")
-                    next_url = next_btn.get_attribute("href")
-                except: 
-                    print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up!")
-                    next_url = None
+        with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
+            sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
+            try: sb.uc_gui_click_captcha()
+            except: pass
             
-            with open(next_url_file, "w", encoding="utf-8") as f:
-                f.write(next_url if next_url else "None")
-                
-        return next_url, True 
+            try:
+                next_btn = sb.find_element("css selector", "a.next_page")
+                next_url = next_btn.get_attribute("href")
+            except: 
+                print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up!")
+                next_url = None
+
+        return next_url, True  # True means it was skipped
+    # ======================================================================
 
     existing_chars_text = ""
     if os.path.exists(char_file):
@@ -261,10 +251,6 @@ def process_chapter(chapter_url):
         except:
             print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up! No more new panels.")
             next_url = None
-
-    # Saves to disk instantly so Selenium isn't needed for this chapter in the future
-    with open(next_url_file, "w", encoding="utf-8") as f:
-        f.write(next_url if next_url else "None")
 
     print(f"[{chap_num}] Processing {len(image_urls)} Strips...")
     parts, original_files, ai_heights =[], {}, {}
