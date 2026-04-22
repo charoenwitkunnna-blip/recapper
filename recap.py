@@ -18,7 +18,11 @@ from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
 START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
-MAX_CHAPTERS_TO_PROCESS = 3
+MAX_CHAPTERS_TO_PROCESS = 1
+
+# Extract Manga Name globally so it can be used for final stitching
+url_parts =[p for p in START_URL.split('/') if p]
+MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
 GEMINI_API_KEYS = []
@@ -60,48 +64,41 @@ def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
     
     # 1. Parse URL for naming
-    url_parts =[p for p in chapter_url.split('/') if p]
-    manga_name = url_parts[-2] 
+    url_parts = [p for p in chapter_url.split('/') if p]
     chapter_str = url_parts[-1] 
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
 
     # 2. Setup Dynamic Directories (Create if they don't exist)
-    base_dir = manga_name
+    base_dir = MANGA_NAME
     cast_dir = os.path.join(base_dir, "cast")
     chapters_dir = os.path.join(base_dir, "chapters")
     current_chap_dir = os.path.join(chapters_dir, chap_num)
-    video_out_dir = os.path.join(base_dir, "video")
     temp_dir = os.path.join(base_dir, "temp")
 
-    for d in[cast_dir, chapters_dir, current_chap_dir, video_out_dir, temp_dir]:
+    for d in[cast_dir, chapters_dir, current_chap_dir, temp_dir]:
         os.makedirs(d, exist_ok=True)
 
     char_file = os.path.join(cast_dir, "characters.txt")
     highest_file = os.path.join(chapters_dir, "highest.txt")
     
-    # Video Output Paths
-    final_name = f"{manga_name}_ch{chap_num}.mp4"
+    # Video Output Path (Only saved inside the chapter folder now)
     final_path = os.path.join(current_chap_dir, "video.mp4")
-    global_video_path = os.path.join("videos", final_name)
 
     # ================= RESUME CHECK =================
-    # If the video already exists, just find the next chapter link and skip processing
-    if os.path.exists(final_path) or os.path.exists(global_video_path):
-        print(f"[{chap_num}] Video already exists! Skipping AI & Rendering to continue recap...")
+    if os.path.exists(final_path):
+        print(f"[{chap_num}] Video already exists in chapter folder! Skipping AI & Rendering to continue recap...")
         next_url = None
         with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
             sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
             try: sb.uc_gui_click_captcha()
             except: pass
-            
             try:
                 next_btn = sb.find_element("css selector", "a.next_page")
                 next_url = next_btn.get_attribute("href")
             except: 
                 print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up!")
                 next_url = None
-
         return next_url, True  # True means it was skipped
     # ================================================
 
@@ -241,7 +238,7 @@ def process_chapter(chapter_url):
         
         if effect == 'pan_down' and aspect_ratio > 1.8:
             crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
         elif effect == 'pan_up' and aspect_ratio > 1.8:
             crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
             cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
@@ -256,21 +253,64 @@ def process_chapter(chapter_url):
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
-    # 8. Stitching
-    print(f"[{chap_num}] Stitching...")
+    # 8. Stitching Chapter
+    print(f"[{chap_num}] Stitching Chapter...")
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
         f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
     
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", final_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
-    # Copy to "videos/" global folder
-    shutil.copy(final_path, global_video_path)
-    
     with open(highest_file, "w") as f: f.write(str(chap_num))
     shutil.rmtree(temp_dir, ignore_errors=True)
     
     return next_url, False # False means it was NOT skipped (it processed normally)
+
+
+def stitch_all_chapters():
+    """
+    Looks through the manga's chapters directory, finds all individual video.mp4 files,
+    sorts them chronologically, and stitches them into ONE massive recap video in the /videos/ folder.
+    """
+    print(f"\n{'='*50}\n[FINALIZING] Stitching Full Series Recap\n{'='*50}")
+    chapters_dir = os.path.join(MANGA_NAME, "chapters")
+    if not os.path.exists(chapters_dir):
+        print("No chapters directory found.")
+        return
+        
+    chap_dirs =[d for d in os.listdir(chapters_dir) if os.path.isdir(os.path.join(chapters_dir, d))]
+    valid_chaps =[]
+    
+    for d in chap_dirs:
+        vid_path = os.path.join(chapters_dir, d, "video.mp4")
+        if os.path.exists(vid_path):
+            # Extract number so chapter 2 comes before chapter 10
+            num_match = re.search(r'\d+', d)
+            num = int(num_match.group(0)) if num_match else 0
+            valid_chaps.append((num, vid_path))
+            
+    # Sort by chapter number
+    valid_chaps.sort(key=lambda x: x[0])
+    
+    if not valid_chaps:
+        print("No chapter videos found to stitch.")
+        return
+        
+    list_path = os.path.join(MANGA_NAME, "full_recap_list.txt")
+    with open(list_path, "w") as f:
+        for num, vp in valid_chaps:
+            # Absolute path with safe slashes for ffmpeg concat
+            f.write(f"file '{os.path.abspath(vp).replace(chr(92), '/')}'\n")
+            
+    final_recap_name = f"{MANGA_NAME}_full_recap.mp4"
+    final_recap_path = os.path.join("videos", final_recap_name)
+    
+    # Fast Concat without re-encoding (-c copy)
+    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", final_recap_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    print(f"SUCCESS: Stitched {len(valid_chaps)} chapters into {final_recap_path}")
+    if os.path.exists(list_path):
+        os.remove(list_path)
 
 # ================= MAIN LOOP =================
 if not os.path.exists("kokoro-v1.0.onnx"):
@@ -285,12 +325,15 @@ while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
     try:
         current_target, skipped = process_chapter(current_target)
         
-        # Only increment the 'processed' count if a NEW chapter was actually generated.
         if not skipped:
             processed += 1
             
     except Exception as e:
         print(f"Error: {e}")
         break
+
+# Once the loop breaks (hit Max Chapters or Manga Info caught up)
+# Gather all chapters ever generated and stitch them into the main /videos/ folder
+stitch_all_chapters()
 
 print("\nRecap process finished.")
