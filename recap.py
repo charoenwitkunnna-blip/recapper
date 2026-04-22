@@ -138,7 +138,6 @@ def process_chapter(chapter_url):
             print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up! No more new panels.")
             next_url = None
 
-    # 5. Process Strips
     print(f"[{chap_num}] Processing {len(image_urls)} Strips...")
     parts, original_files, ai_heights =[], {}, {}
 
@@ -172,7 +171,6 @@ def process_chapter(chapter_url):
         original_files[idx], ai_heights[idx] = path, h
         parts.extend([t, i])
 
-    # 6. AI Scripting
     print(f"[{chap_num}] AI Writing Script...")
     prompt = (
         "Act as a professional Manhwa recap scriptwriter. Analyze the provided image strips and generate an engaging recap.\n\n"
@@ -225,7 +223,7 @@ def process_chapter(chapter_url):
     }
 
     payload = {
-        "contents":[{"parts": [{"text": prompt}] + parts}], 
+        "contents":[{"parts":[{"text": prompt}] + parts}], 
         "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}
     }
     
@@ -249,7 +247,6 @@ def process_chapter(chapter_url):
             for c in script_data['new_characters']:
                 f.write(f"Name: {c.get('name')}\nRole: {c.get('role')}\nAppearance: {c.get('appearance')}\nPersonality: {c.get('personality')}\n{'-'*20}\n")
 
-    # 7. Rendering (HIGH PERFORMANCE + FULL SCREEN YOUTUBE 16:9)
     print(f"[{chap_num}] Preparing Audio & Assets Concurrently...")
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
     
@@ -276,47 +273,47 @@ def process_chapter(chapter_url):
         
         aspect_ratio = crop.height / crop.width
         effect = block.get('effect', 'zoom_in').lower()
-
         common_flags =["-c:v", "libx264", "-preset", "ultrafast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
-        # --- FIXED: Panning now keeps proportions and uses blurred side backgrounds! ---
-        if effect == 'pan_down' and aspect_ratio > 1.2:
-            target_w = 1080 # Keeps the comic width reasonable for a 16:9 video
-            target_h = int(target_w * aspect_ratio)
-            
-            # Create a tall background with blurred edges filling 1920x(height)
-            bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
-            fg = crop.resize((target_w, target_h), Image.Resampling.LANCZOS)
-            bg.paste(fg, ((1920 - target_w) // 2, 0)) # Paste comic in the dead center
-            bg.save(f_path)
-            
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                   "-vf", f"crop=1920:1080:0:min(in_h-1080\\,(in_h-1080)*(t/{video_dur})),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-                   
-        elif effect == 'pan_up' and aspect_ratio > 1.2:
-            target_w = 1080
-            target_h = int(target_w * aspect_ratio)
-            
+        # --- FIXED: Uniform Sizing & AI Override ---
+        # We enforce a constant width of 1080 for both panning AND zooming so they match perfectly!
+        target_w = 1080 
+        target_h = int(target_w * aspect_ratio)
+
+        # 1. If the image is extremely tall, we completely ignore AI "zoom" choices and FORCE a pan
+        if target_h > 1200:
+            if effect not in['pan_up', 'pan_down']:
+                effect = 'pan_down' # Fix AI hallucination
+
             bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
             fg = crop.resize((target_w, target_h), Image.Resampling.LANCZOS)
             bg.paste(fg, ((1920 - target_w) // 2, 0)) 
             bg.save(f_path)
             
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                   "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-(in_h-1080)*(t/{video_dur})),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-                   
+            if effect == 'pan_up':
+                cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
+                       "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-(in_h-1080)*(t/{video_dur})),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            else: # pan_down
+                cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
+                       "-vf", f"crop=1920:1080:0:min(in_h-1080\\,(in_h-1080)*(t/{video_dur})),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       
+        # 2. If the image is square-ish, we allow zooming, but maintain the exact same base width!
         else:
-            # Zooming (or fallback if the image isn't tall enough to pan smoothly)
             bg = crop.resize((1920, 1080)).filter(ImageFilter.GaussianBlur(40))
-            s_w = int(crop.width * min(1920/crop.width, 1080/crop.height))
-            s_h = int(crop.height * min(1920/crop.width, 1080/crop.height))
-            bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920-s_w)//2, (1080-s_h)//2))
+            
+            # Calculates size to fit nicely in 1920x1080 while matching the 1080 width baseline
+            scale_factor = min(1920 / crop.width, 1080 / crop.height)
+            s_w = int(crop.width * scale_factor)
+            s_h = int(crop.height * scale_factor)
+            
+            fg = crop.resize((s_w, s_h), Image.Resampling.LANCZOS)
+            bg.paste(fg, ((1920 - s_w) // 2, (1080 - s_h) // 2))
             bg.save(f_path)
 
-            if effect == 'zoom_out' or effect == 'pan_up': 
+            if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=2880x1620,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-            else: 
+                       "-vf", f"scale=2880x1620,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
+            else: # zoom_in
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
                        "-vf", f"scale=2880x1620,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
@@ -329,9 +326,9 @@ def process_chapter(chapter_url):
             if res: ffmpeg_tasks.append(res)
 
     print(f"[{chap_num}] Rendering Synced Clips with FFmpeg...")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:
+        [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
-    # 8. Stitching Chapter
     print(f"[{chap_num}] Stitching Chapter...")
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
