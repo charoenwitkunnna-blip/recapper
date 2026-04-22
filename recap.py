@@ -18,7 +18,7 @@ from kokoro_onnx import Kokoro
 CHAPTER_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS = []
+GEMINI_API_KEYS =[]
 found_key_names =[]
 
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
@@ -53,15 +53,19 @@ if not os.path.exists(font_path):
     urllib.request.urlretrieve("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Black.ttf", font_path)
 font = ImageFont.truetype(font_path, 28)
 
-print(f"[1] Loading Manhwa...")
+# --- SPEED UP FIX: page_load_strategy="eager" ignores slow ad networks ---
+print(f"[1] Loading Manhwa (Eager Mode)...")
 image_urls, site_cookies =[], {}
-with SB(uc=True, xvfb=True, locale_code="en") as sb:
-    sb.uc_open_with_reconnect(CHAPTER_URL, reconnect_time=6)
+with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
+    sb.uc_open_with_reconnect(CHAPTER_URL, reconnect_time=4)
     try: sb.uc_gui_click_captcha()
     except: pass
-    sb.wait_for_element(".wp-manga-chapter-img", timeout=30)
+    sb.wait_for_element(".wp-manga-chapter-img", timeout=15)
+    
+    # We only need a tiny sleep now just to ensure the DOM injects the lazy-load tags
     sb.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(3)
+    time.sleep(0.5) 
+    
     images = sb.find_elements("css selector", ".wp-manga-chapter-img")
     for img in images:
         src = img.get_attribute("data-src") or img.get_attribute("src")
@@ -102,7 +106,12 @@ for idx, path, h, t, i in results:
 
 # --- AI SCRIPTING ---
 print(f"[3] Generating AI Script...")
-prompt = "Act as a professional Manhwa recap scriptwriter. Follow strict NO MARKDOWN, highly detailed, high-energy, no-repetitive-naming rules. Return JSON with 'characters' and 'panels' (image_index, start_mark, end_mark, narration)."
+prompt = (
+    "Act as a professional Manhwa recap scriptwriter. Follow strict NO MARKDOWN, highly detailed, high-energy, no-repetitive-naming rules. "
+    "Return JSON with 'characters' and 'panels'. Each item in 'panels' must have: "
+    "image_index (int), start_mark (int), end_mark (int), narration (string), and effect (string). "
+    "For 'effect', you MUST choose exactly one of these: 'zoom_in', 'zoom_out', 'pan_down', 'pan_up'. Choose the cinematic effect that best fits the action."
+)
 payload = {"contents": [{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json"}}
 
 script_data = None
@@ -137,6 +146,8 @@ for i, block in enumerate(script_data['panels']):
     s = block.get('start_mark', 0)
     e = block.get('end_mark', 10)
     
+    effect = block.get('effect', 'zoom_in').lower()
+    
     if img_idx not in original_files: continue
         
     raw = Image.open(original_files[img_idx])
@@ -155,21 +166,52 @@ for i, block in enumerate(script_data['panels']):
     
     f_path, v_out = f"videos/temp/p_{i:04d}.jpg", f"videos/temp/v_{i:04d}.mp4"
     
-    if crop.height/crop.width > 2.2: # Pan 0.3
-        crop.resize((1080, int(1080*(crop.height/crop.width)))).save(f_path)
-        cmd =["ffmpeg", "-y", "-loop", "1", "-t", str(dur), "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:((in_h-1920)*0.3)*(t/{dur}),format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out]
-    else: # Zoom 1.30
-        bg = crop.resize((1080, 1920)).filter(ImageFilter.GaussianBlur(35))
-        s_w, s_h = int(crop.width * min(1080/crop.width, 1920/crop.height)), int(crop.height * min(1080/crop.width, 1920/crop.height))
-        bg.paste(crop.resize((s_w, s_h)), ((1080-s_w)//2, (1920-s_h)//2))
+    aspect_ratio = crop.height / crop.width
+    
+    # Standard Blur Background for Zooms/Short Panels
+    bg = crop.resize((1080, 1920)).filter(ImageFilter.GaussianBlur(35))
+    s_w, s_h = int(crop.width * min(1080/crop.width, 1920/crop.height)), int(crop.height * min(1080/crop.width, 1920/crop.height))
+    bg.paste(crop.resize((s_w, s_h)), ((1080-s_w)//2, (1920-s_h)//2))
+
+    if effect == 'pan_down' and aspect_ratio > 1.8:
+        crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
+        cmd =[
+            "ffmpeg", "-y", "-loop", "1", "-t", str(dur), 
+            "-i", f_path, "-i", audio_path, 
+            "-vf", f"crop=1080:1920:0:min(in_h-1920\\,150*t),format=yuv420p", 
+            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
+        ]
+        
+    elif effect == 'pan_up' and aspect_ratio > 1.8:
+        crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
+        cmd =[
+            "ffmpeg", "-y", "-loop", "1", "-t", str(dur), 
+            "-i", f_path, "-i", audio_path, 
+            "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-150*t),format=yuv420p", 
+            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
+        ]
+        
+    elif effect == 'zoom_out':
         bg.save(f_path)
-        zoom_inc = min(0.002, 0.3 / frames)
-        cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='min(1.3, zoom+{zoom_inc:.6f})':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out]
+        zoom_expr = f"1.25-(0.25/{frames})*on"
+        cmd =[
+            "ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
+            "-vf", f"scale=2160x3840,zoompan=z='{zoom_expr}':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", 
+            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
+        ]
+        
+    else: # Zoom in
+        bg.save(f_path)
+        zoom_expr = f"1.00+(0.25/{frames})*on"
+        cmd =[
+            "ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
+            "-vf", f"scale=2160x3840,zoompan=z='{zoom_expr}':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", 
+            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
+        ]
     
     ffmpeg_tasks.append((cmd, v_out))
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:
-    [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
 with open("videos/temp/vid_list.txt", "w") as f:
     f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
