@@ -28,7 +28,6 @@ jobs:
             voices-v1.0.bin
           key: kokoro-models-v1.0
 
-      # >>> THE FIX IS HERE <<<
       - name: Install System Dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -47,24 +46,32 @@ jobs:
         run: |
           python recap.py
 
-      - name: Upload Generated Artifacts
+      - name: Upload Full Recap as Artifact
         if: always() 
         uses: actions/upload-artifact@v4
         with:
-          name: recap-outputs
-          path: |
-            **/*.mp4
-            **/*.txt
+          name: full-recap-video
+          # This only grabs the videos inside the "videos" folder (like full_recap.mp4)
+          path: videos/*.mp4
+          retention-days: 5 
 
-      - name: Commit and Push Lore
+      - name: Commit and Push Chapter Progress
         if: always()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
           
-          echo "*.mp4" >> .gitignore
+          # 1. Ignore the videos/ folder (which holds the massive full recaps)
+          # 2. Ignore temporary script outputs and models
+          echo "videos/" >> .gitignore
+          echo "*/temp/" >> .gitignore
+          echo "*.onnx" >> .gitignore
+          echo "*.bin" >> .gitignore
           
+          # Now it is safe to git add everything else. 
+          # This WILL include manga_name/chapters/1/video.mp4 and your .txt lore files!
           git add .
-          git commit -m "Update Manhwa Lore and Progress" || echo "No changes to commit"
+          
+          git commit -m "Update chapter videos and lore" || echo "No changes to commit"
           git pull --rebase origin main || true
-          git push
+          git push origin main
