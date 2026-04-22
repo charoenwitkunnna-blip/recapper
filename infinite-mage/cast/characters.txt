@@ -43,3 +43,13 @@ Role: The current Head of the House of Ogent, a 2nd Class Noble family.
 Appearance: Mentioned as the head of a warrior family; described as an Official 4th Class Knight.
 Personality: Implied to be strict and authoritative, overseeing a family known for producing powerful warriors.
 --------------------
+Name: Rian Ogent
+Role: The youngest son of the House of Ogent.
+Appearance: A boy with messy blue hair and sharp golden eyes. He wears a simple white t-shirt and dark trousers, looking athletic and energetic.
+Personality: Hot-headed, persistent, and competitive. He has the pride of a warrior and despises what he perceives as cowardice.
+--------------------
+Name: Swordsman Instructor
+Role: The combat teacher for the Ogent family children.
+Appearance: A tall, intimidating man with a bald head, a long grey ponytail, and a thick beard. He has a very muscular build.
+Personality: Terrifyingly strict and loud. He possesses enough authority to discipline the young masters of the house through extreme physical labor.
+--------------------
