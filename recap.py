@@ -21,7 +21,7 @@ START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 MAX_CHAPTERS_TO_PROCESS = 1
 
 # --- KOKORO TTS SETTINGS ---
-VOICE_MODEL = "af_heart"  
+VOICE_MODEL = "am_adam" # Do not change  
 AUDIO_SPEED = 1.0         
 
 url_parts =[p for p in START_URL.split('/') if p]
