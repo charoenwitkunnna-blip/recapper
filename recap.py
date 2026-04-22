@@ -13,10 +13,11 @@ import soundfile as sf
 import json
 import concurrent.futures
 import shutil
+import math
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
-START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
+START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-122/"
 MAX_CHAPTERS_TO_PROCESS = 5 # Set this to 100 if you want it to run all night
 
 # --- DYNAMIC API KEY EXTRACTION ---
@@ -200,12 +201,14 @@ def process_chapter(chapter_url):
         audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
         sf.write(audio_path, samples, 24000)
         
+        # EXACT Frame/Duration Math Calculation to prevent Drift
         exact_dur = max(0.5, len(samples) / 24000.0)
-        dur_str = f"{exact_dur:.3f}"
-        frames = int(exact_dur * 30)
+        frames = math.ceil(exact_dur * 30)
+        video_dur = frames / 30.0
         
         f_path = os.path.join(temp_dir, f"p_{i:04d}.jpg")
-        v_out = os.path.join(temp_dir, f"v_{i:04d}.mp4")
+        # Change to .MOV to completely eliminate AAC silent padding drift during concat
+        v_out = os.path.join(temp_dir, f"v_{i:04d}.mov") 
         
         aspect_ratio = crop.height / crop.width
         bg = crop.resize((1080, 1920)).filter(ImageFilter.GaussianBlur(35))
@@ -216,21 +219,50 @@ def process_chapter(chapter_url):
 
         if effect == 'pan_down' and aspect_ratio > 1.8:
             crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-t", dur_str, "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-ar", "44100", "-b:a", "192k", "-map", "0:v", "-map", "1:a", "-shortest", v_out]
+            cmd =[
+                "ffmpeg", "-y", "-loop", "1", "-framerate", "30", 
+                "-i", f_path, "-i", audio_path, 
+                "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p", 
+                "-af", "apad", "-t", str(video_dur), 
+                "-c:v", "libx264", "-preset", "superfast", 
+                "-c:a", "pcm_s16le", "-ar", "44100", 
+                "-map", "0:v", "-map", "1:a", v_out
+            ]
         elif effect == 'pan_up' and aspect_ratio > 1.8:
             crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-t", dur_str, "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-ar", "44100", "-b:a", "192k", "-map", "0:v", "-map", "1:a", "-shortest", v_out]
+            cmd =[
+                "ffmpeg", "-y", "-loop", "1", "-framerate", "30", 
+                "-i", f_path, "-i", audio_path, 
+                "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),fps=30,setsar=1,format=yuv420p", 
+                "-af", "apad", "-t", str(video_dur), 
+                "-c:v", "libx264", "-preset", "superfast", 
+                "-c:a", "pcm_s16le", "-ar", "44100", 
+                "-map", "0:v", "-map", "1:a", v_out
+            ]
         elif effect == 'zoom_out':
             bg.save(f_path)
-            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-ar", "44100", "-b:a", "192k", "-map", "0:v", "-map", "1:a", "-shortest", "-t", dur_str, v_out]
+            cmd =[
+                "ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
+                "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p", 
+                "-af", "apad", 
+                "-c:v", "libx264", "-preset", "superfast", 
+                "-c:a", "pcm_s16le", "-ar", "44100", 
+                "-map", "0:v", "-map", "1:a", "-shortest", v_out
+            ]
         else: 
             bg.save(f_path)
-            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-ar", "44100", "-b:a", "192k", "-map", "0:v", "-map", "1:a", "-shortest", "-t", dur_str, v_out]
+            cmd =[
+                "ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
+                "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p", 
+                "-af", "apad", 
+                "-c:v", "libx264", "-preset", "superfast", 
+                "-c:a", "pcm_s16le", "-ar", "44100", 
+                "-map", "0:v", "-map", "1:a", "-shortest", v_out
+            ]
         
         ffmpeg_tasks.append((cmd, v_out))
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:
-        [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
     # 8. Stitching Chapter
     print(f"[{chap_num}] Stitching Chapter Video...")
@@ -240,7 +272,13 @@ def process_chapter(chapter_url):
 
     # Export strictly to the numbered chapter folder
     final_output = os.path.join(current_chap_dir, "video.mp4")
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", vid_list_path, "-c", "copy", final_output], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    # We now convert the perfectly continuous PCM audio directly to AAC on the final MP4
+    subprocess.run([
+        "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", vid_list_path, 
+        "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", 
+        final_output
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
     # Track the highest chapter completed
     with open(highest_file, "w") as f:
