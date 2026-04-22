@@ -70,7 +70,7 @@ with SB(uc=True, xvfb=True, locale_code="en") as sb:
         site_cookies[cookie['name']] = cookie['value']
 
 print(f"[2] Processing {len(image_urls)} Strips...")
-parts, original_files, ai_heights = [], {}, {}
+parts, original_files, ai_heights =[], {}, {}
 
 def process_image(idx, img_url):
     try:
@@ -93,7 +93,7 @@ def process_image(idx, img_url):
     except: return None
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-    results = [r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
+    results =[r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
 results.sort(key=lambda x: x[0])
 
 for idx, path, h, t, i in results:
@@ -101,6 +101,7 @@ for idx, path, h, t, i in results:
     parts.extend([t, i])
 
 # --- AI SCRIPTING ---
+print(f"[3] Generating AI Script...")
 prompt = "Act as a professional Manhwa recap scriptwriter. Follow strict NO MARKDOWN, highly detailed, high-energy, no-repetitive-naming rules. Return JSON with 'characters' and 'panels' (image_index, start_mark, end_mark, narration)."
 payload = {"contents": [{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json"}}
 
@@ -113,15 +114,37 @@ for _ in range(15):
         break
     current_key = (current_key + 1) % len(GEMINI_API_KEYS)
 
+if not script_data:
+    print("Error: AI Script generation failed.")
+    exit(1)
+
+# --- MODEL DOWNLOAD (FIXED v1.0 URLS) ---
+print(f"[4] Verifying TTS Models (v1.0)...")
+if not os.path.exists("kokoro-v1.0.onnx"):
+    print("    -> Downloading Kokoro v1.0 ONNX...")
+    urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx", "kokoro-v1.0.onnx")
+if not os.path.exists("voices-v1.0.bin"):
+    print("    -> Downloading Voices v1.0 BIN...")
+    urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin", "voices-v1.0.bin")
+
 # --- RENDERING ---
-kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
-concat_lines, ffmpeg_tasks = [], []
+print(f"[5] Rendering Frames & Generating Audio...")
+kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
+concat_lines, ffmpeg_tasks = [],[]
 
 for i, block in enumerate(script_data['panels']):
-    img_idx, s, e = block['image_index'], block['start_mark'], block['end_mark']
+    img_idx = block.get('image_index')
+    s = block.get('start_mark', 0)
+    e = block.get('end_mark', 10)
+    
+    if img_idx not in original_files: continue
+        
     raw = Image.open(original_files[img_idx])
     scale = raw.height / ai_heights[img_idx]
-    crop = raw.crop((0, int(s*10*scale)-20, raw.width, int(e*10*scale)+20))
+    
+    top_px = max(0, int(s*10*scale)-20)
+    bottom_px = min(raw.height, int(e*10*scale)+20)
+    crop = raw.crop((0, top_px, raw.width, bottom_px))
     
     # Audio
     samples, _ = kokoro.create(block['narration'], voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
@@ -134,22 +157,23 @@ for i, block in enumerate(script_data['panels']):
     
     if crop.height/crop.width > 2.2: # Pan 0.3
         crop.resize((1080, int(1080*(crop.height/crop.width)))).save(f_path)
-        cmd = ["ffmpeg", "-y", "-loop", "1", "-t", str(dur), "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:((in_h-1920)*0.3)*(t/{dur}),format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out]
+        cmd =["ffmpeg", "-y", "-loop", "1", "-t", str(dur), "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:((in_h-1920)*0.3)*(t/{dur}),format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out]
     else: # Zoom 1.30
         bg = crop.resize((1080, 1920)).filter(ImageFilter.GaussianBlur(35))
         s_w, s_h = int(crop.width * min(1080/crop.width, 1920/crop.height)), int(crop.height * min(1080/crop.width, 1920/crop.height))
         bg.paste(crop.resize((s_w, s_h)), ((1080-s_w)//2, (1920-s_h)//2))
         bg.save(f_path)
         zoom_inc = min(0.002, 0.3 / frames)
-        cmd = ["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='min(1.3, zoom+{zoom_inc:.6f})':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out]
+        cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='min(1.3, zoom+{zoom_inc:.6f})':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out]
     
     ffmpeg_tasks.append((cmd, v_out))
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()-1) as ex:
+with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:
     [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
 with open("videos/temp/vid_list.txt", "w") as f:
-    f.write("\n".join([f"file '{os.path.abspath(c[1])}'" for c in ffmpeg_tasks]))
+    f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
 
-subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "videos/temp/vid_list.txt", "-c", "copy", "videos/final_recap.mp4"])
-print("Done!")
+print(f"[6] Stitching Video...")
+subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", "videos/temp/vid_list.txt", "-c", "copy", "videos/final_recap.mp4"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+print("Done! Masterpiece generated at videos/final_recap.mp4")
