@@ -27,7 +27,7 @@ MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
 GEMINI_API_KEYS = []
-temp_keys = []
+temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
 all_secrets_raw = os.environ.get("ALL_SECRETS")
@@ -101,7 +101,7 @@ def process_chapter(chapter_url):
             existing_chars_text = f.read()
 
     print(f"[{chap_num}] Scraping Images...")
-    image_urls, site_cookies, next_url = [], {}, None
+    image_urls, site_cookies, next_url =[], {}, None
     with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
         sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
         try: sb.uc_gui_click_captcha()
@@ -121,7 +121,7 @@ def process_chapter(chapter_url):
         except: next_url = None
 
     print(f"[{chap_num}] Processing Strips...")
-    parts, original_files, ai_heights = [], {}, {}
+    parts, original_files, ai_heights =[], {}, {}
 
     def process_image(idx, img_url):
         try:
@@ -144,7 +144,7 @@ def process_chapter(chapter_url):
         except: return None
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
-        results = [r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
+        results =[r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
     results.sort(key=lambda x: x[0])
     for idx, path, h, t, i in results:
         original_files[idx], ai_heights[idx] = path, h
@@ -200,48 +200,55 @@ def process_chapter(chapter_url):
         audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
         sf.write(audio_path, samples, 24000)
         
-        video_dur = max(0.5, len(samples) / 24000.0)
-        frames = math.ceil(video_dur * 30)
+        exact_dur = max(0.5, len(samples) / 24000.0)
+        frames = math.ceil(exact_dur * 30)
+        video_dur = frames / 30.0
+        
         f_path, v_out = os.path.join(temp_dir, f"p_{i:04d}.jpg"), os.path.join(temp_dir, f"v_{i:04d}.mov") 
         aspect_ratio = crop.height / crop.width
         effect = block.get('effect', 'zoom_in').lower()
-        common_flags = ["-c:v", "libx264", "-preset", "ultrafast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
+        common_flags =["-c:v", "libx264", "-preset", "ultrafast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
-        # Base dimensions for 16:9 layout
+        # New 16:9 Landscape Dimensions
         target_w = 1080 
         target_h = int(target_w * aspect_ratio)
 
-        # OLD WAY: Linear continuous panning/zooming without stops
+        # OLD LOGIC FIXED SPEED & ZOOM APPLIED TO 16:9 (1920x1080)
         if target_h > 1200:
             if effect not in ['pan_up', 'pan_down']: effect = 'pan_down'
+            
+            # 1920-wide canvas with the Manhwa centered
             bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
             fg = crop.resize((target_w, target_h), Image.Resampling.LANCZOS)
             bg.paste(fg, ((1920 - target_w) // 2, 0)) 
             bg.save(f_path)
             
+            # Fixed Speed 100 pixels per second (Smooth Panning)
             if effect == 'pan_up':
-                cmd = ["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"crop=1920:1080:0:(in_h-1080)-(in_h-1080)*(t/{video_dur}),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
+                       "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
             else: # pan_down
-                cmd = ["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"crop=1920:1080:0:(in_h-1080)*(t/{video_dur}),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
+                       "-vf", f"crop=1920:1080:0:min(in_h-1080\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         else:
+            # Short image -> 16:9 blurred background + zoompan logic
             bg = crop.resize((1920, 1080)).filter(ImageFilter.GaussianBlur(40))
             scale_f = min(1920 / crop.width, 1080 / crop.height)
             s_w, s_h = int(crop.width * scale_f), int(crop.height * scale_f)
             bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920 - s_w) // 2, (1080 - s_h) // 2))
             bg.save(f_path)
 
+            # Standardized 25% smooth zoom scaling to 4K first to prevent pixelation
             if effect == 'zoom_out': 
-                cmd = ["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=2880x1620,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
+                       "-vf", f"scale=3840x2160,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
             else: # zoom_in
-                cmd = ["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=2880x1620,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
+                       "-vf", f"scale=3840x2160,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
         return (cmd, v_out)
 
-    ffmpeg_tasks = []
+    ffmpeg_tasks =[]
     with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as ex:
         results = ex.map(lambda p: prepare_panel_assets(p[0], p[1]), enumerate(script_data['panels']))
         for res in results:
@@ -264,7 +271,7 @@ def stitch_all_chapters():
     print(f"\n{'='*50}\n[FINALIZING] Stitching Recap\n{'='*50}")
     chapters_dir = os.path.join(MANGA_NAME, "chapters")
     if not os.path.exists(chapters_dir): return
-    valid_chaps = []
+    valid_chaps =[]
     for d in os.listdir(chapters_dir):
         vp = os.path.join(chapters_dir, d, "video.mp4")
         if os.path.exists(vp):
