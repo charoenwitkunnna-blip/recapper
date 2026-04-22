@@ -13,3 +13,38 @@ Role: A high-level enforcer for the lab who executes the escapees.
 Appearance: A massive, muscular man with spiky red hair and a beard, wearing green-lensed tactical goggles and a black 'Guard' bodysuit.
 Personality: Arrogant, sadistic, and takes immense pleasure in slaughtering those he deems weaker.
 --------------------
+Name: The Gas-Masked Scientists
+Role: The primary antagonists overseeing the inhumane biological experiments of Project: Transcendence.
+Appearance: Figures wearing white lab coats and black industrial gas masks, often seen holding tablets or monitoring equipment.
+Personality: Cold, clinical, and completely devoid of empathy for their human test subjects.
+--------------------
+Name: The Escapee Friends
+Role: Fellow victims of the lab who sacrifice their lives to allow Woohyun to escape.
+Appearance: Various men and women in bloodstained white prisoner jumpsuits, carrying makeshift weapons like pipes and axes.
+Personality: Desperate but loyal, driven by a mutual bond of suffering and a final wish for revenge.
+--------------------
+Name: Kim Youngjun
+Role: Experiment No. 81 and fellow survivor who seeks immediate and brutal retribution against their captors.
+Appearance: A tall man with spiky light-colored hair, wearing a black tactical bodysuit and combat gear.
+Personality: Aggressive, impulsive, and deeply scarred by the experiments, serving as a foil to Woohyun's more calculated nature.
+--------------------
+Name: Jung Nayeon
+Role: Woohyun's closest friend in the real world and an aspiring gaming streamer.
+Appearance: A young woman with long brown hair, often wearing casual clothes like a pink baseball cap and oversized t-shirts.
+Personality: Cheerful, energetic, and slightly bossy, she acts as Woohyun's primary link to his former normal life.
+--------------------
+Name: General Manager
+Role: A high-ranking official overseeing Project: Transcendence.
+Appearance: A middle-aged man with short blond hair and a stubble beard, wearing a formal blue suit and tie.
+Personality: Arrogant and elitist when in power, but turns cowardly and desperate when faced with the consequences of his actions.
+--------------------
+Name: Kang Soyul
+Role: A professional gaming streamer and Woohyun's accidental party member.
+Appearance: A young woman with long, dark blue hair and bright eyes. She wears a white research lab prisoner outfit similar to Woohyun's, but looks much more like a modern gamer.
+Personality: Energetic, dramatic, and highly motivated by money and her viewers' opinions, though she is currently terrified by the game's difficulty.
+--------------------
+Name: The Bureau Soldier
+Role: An ally within the game tutorial who provides Woohyun with equipment.
+Appearance: A soldier in dark tactical armor with a 'Dimensional Management Bureau' logo. He is seen heavily injured and bleeding out against a wall.
+Personality: Selfless and dutiful, prioritizing the safety of the 'victims' even as he faces death.
+--------------------
