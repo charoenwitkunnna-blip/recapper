@@ -38,3 +38,8 @@ Role: Assistant Butler of the House of Ogent.
 Appearance: An elderly man with slicked-back white hair, a neat white goatee, and thin-rimmed glasses. He wears a formal dark coat and tie.
 Personality: Cold, arrogant, and clinical. He looks down on commoners, viewing them only as tools, but possesses a sharp eye for potential utility.
 --------------------
+Name: Bishop Ogent
+Role: The current Head of the House of Ogent, a 2nd Class Noble family.
+Appearance: Mentioned as the head of a warrior family; described as an Official 4th Class Knight.
+Personality: Implied to be strict and authoritative, overseeing a family known for producing powerful warriors.
+--------------------
