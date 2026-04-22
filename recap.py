@@ -231,7 +231,7 @@ def process_chapter(chapter_url):
         target_h = int(target_w * aspect_ratio)
 
         # OLD LOGIC FIXED SPEED & ZOOM APPLIED TO 16:9 (1920x1080)
-        if target_h > 1200:
+        if target_h > 2500:
             if effect not in['pan_up', 'pan_down']: effect = 'pan_down'
             
             # 1920-wide canvas with the Manhwa centered
