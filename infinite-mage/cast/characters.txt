@@ -18,3 +18,23 @@ Role: Headmaster of the Alpheas Magic Academy and a Grade 4 Certified Mage.
 Appearance: An elderly man with a long white beard and hair, wearing ornate blue and gold mage robes. He exudes wisdom and authority.
 Personality: Eccentric, observant, and seemingly welcoming to those with genuine potential, regardless of their background.
 --------------------
+Name: Shuamin
+Role: A student at the Alpheas Magic Academy who assists Headmaster Myrhe with a demonstration.
+Appearance: A young girl with long purple hair styled into two braided pigtails. She wears the blue and black Alpheas Magic Academy uniform.
+Personality: Diligent, respectful, and capable. She shows great focus when performing magic.
+--------------------
+Name: Amy
+Role: Daughter of the First-Class Noble House of Karmis.
+Appearance: A young girl with long, vibrant red hair and sharp green eyes, wearing a black Gothic-style noble dress.
+Personality: Arrogant, easily bored, and initially cruel, but she possesses a sharp eye for talent and a hidden passion for magic.
+--------------------
+Name: Karmis Shakora
+Role: The current Head of the House of Karmis.
+Appearance: A sophisticated middle-aged man with short brown hair, a mustache, and spectacles. He is seen wearing formal attire.
+Personality: Refined, observant, and patient, though he worries about his daughter's lack of discipline.
+--------------------
+Name: Temuran
+Role: Assistant Butler of the House of Ogent.
+Appearance: An elderly man with slicked-back white hair, a neat white goatee, and thin-rimmed glasses. He wears a formal dark coat and tie.
+Personality: Cold, arrogant, and clinical. He looks down on commoners, viewing them only as tools, but possesses a sharp eye for potential utility.
+--------------------
