@@ -1,0 +1,20 @@
+Name: Arian Shirone
+Role: Protagonist
+Appearance: Young boy with messy blonde hair and bright, intelligent blue eyes. Wears simple commoner clothes.
+Personality: Intellectually curious, sensitive, and determined to overcome his humble origins through learning.
+--------------------
+Name: Arian Vincent
+Role: Shirone's Adoptive Father
+Appearance: A massive, muscular man with long brown hair, a beard, and tanned skin. Carries a large axe.
+Personality: Stoic and intimidating in appearance, but deeply kind, hardworking, and protective of his family.
+--------------------
+Name: Myrhe Alpheas
+Role: Headmaster of the Magic Academy
+Appearance: Elderly man with a long, flowing white beard and blue academic robes. Radiates a gentle but powerful aura.
+Personality: Wise, eccentric, and values raw intellectual talent and 'insight' over social status.
+--------------------
+Name: Shuamin
+Role: Student at Alpheas Magic Academy
+Appearance: Young girl with long purple hair tied into two braided pigtails. She wears the standard black and blue Alpheas Magic Academy robes with a large bow.
+Personality: Disciplined, calm, and highly capable. She is a model student who can enter the 'Spirit Zone' at will.
+--------------------
