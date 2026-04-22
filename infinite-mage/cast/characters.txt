@@ -18,3 +18,13 @@ Role: Student at Alpheas Magic Academy
 Appearance: Young girl with long purple hair tied into two braided pigtails. She wears the standard black and blue Alpheas Magic Academy robes with a large bow.
 Personality: Disciplined, calm, and highly capable. She is a model student who can enter the 'Spirit Zone' at will.
 --------------------
+Name: Olina
+Role: Shirone's Adoptive Mother
+Appearance: A woman with long reddish-brown hair and a gentle, caring face. Wears simple, modest clothing.
+Personality: Nurturing, kind-hearted, and protective. She loves Shirone as her own biological child.
+--------------------
+Name: Martin's Grandpa
+Role: City Merchant
+Appearance: An elderly merchant with a white beard, wearing a straw hat and a green apron.
+Personality: Friendly and appreciative. He is impressed by Shirone's intelligence and literacy.
+--------------------
