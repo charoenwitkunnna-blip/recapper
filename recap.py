@@ -44,7 +44,6 @@ if not GEMINI_API_KEYS:
 os.makedirs("videos", exist_ok=True)
 
 # VERY IMPORTANT: Protect Git repo from bloat if the script crashes midway 
-# before cleaning up temp folders or downloading large AI models.
 if not os.path.exists(".gitignore"):
     with open(".gitignore", "w") as f:
         f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\n")
@@ -80,6 +79,31 @@ def process_chapter(chapter_url):
 
     char_file = os.path.join(cast_dir, "characters.txt")
     highest_file = os.path.join(chapters_dir, "highest.txt")
+    
+    # Video Output Paths
+    final_name = f"{manga_name}_ch{chap_num}.mp4"
+    final_path = os.path.join(current_chap_dir, "video.mp4")
+    global_video_path = os.path.join("videos", final_name)
+
+    # ================= RESUME CHECK =================
+    # If the video already exists, just find the next chapter link and skip processing
+    if os.path.exists(final_path) or os.path.exists(global_video_path):
+        print(f"[{chap_num}] Video already exists! Skipping AI & Rendering to continue recap...")
+        next_url = None
+        with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
+            sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
+            try: sb.uc_gui_click_captcha()
+            except: pass
+            
+            try:
+                next_btn = sb.find_element("css selector", "a.next_page")
+                next_url = next_btn.get_attribute("href")
+            except: 
+                print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up!")
+                next_url = None
+
+        return next_url, True  # True means it was skipped
+    # ================================================
 
     # 3. Load existing lore
     existing_chars_text = ""
@@ -87,7 +111,7 @@ def process_chapter(chapter_url):
         with open(char_file, "r", encoding="utf-8") as f:
             existing_chars_text = f.read()
 
-    # 4. Scrape Chapter and Next Link (Speed fix included)
+    # 4. Scrape Chapter and Next Link
     print(f"[{chap_num}] Scraping Images & Next Link...")
     image_urls, site_cookies, next_url =[], {}, None
     with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
@@ -111,7 +135,8 @@ def process_chapter(chapter_url):
             next_btn = sb.find_element("css selector", "a.next_page")
             next_url = next_btn.get_attribute("href")
         except:
-            pass
+            print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up! No more new panels.")
+            next_url = None
 
     # 5. Process Strips
     print(f"[{chap_num}] Processing {len(image_urls)} Strips...")
@@ -171,7 +196,7 @@ def process_chapter(chapter_url):
             except: pass
         current_key = (current_key + 1) % len(GEMINI_API_KEYS)
 
-    if not script_data: return next_url
+    if not script_data: return next_url, False
 
     # Update Lore File
     if script_data.get('new_characters'):
@@ -179,7 +204,7 @@ def process_chapter(chapter_url):
             for c in script_data['new_characters']:
                 f.write(f"Name: {c.get('name')}\nRole: {c.get('role')}\nAppearance: {c.get('appearance')}\nPersonality: {c.get('personality')}\n{'-'*20}\n")
 
-    # 7. Rendering (Lossless Sync Fix)
+    # 7. Rendering
     print(f"[{chap_num}] Rendering Synced Clips...")
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
     ffmpeg_tasks =[]
@@ -212,7 +237,6 @@ def process_chapter(chapter_url):
 
         effect = block.get('effect', 'zoom_in').lower()
 
-        # Build FFmpeg command with apad to prevent drift
         common_flags =["-c:v", "libx264", "-preset", "superfast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
         if effect == 'pan_down' and aspect_ratio > 1.8:
@@ -230,26 +254,23 @@ def process_chapter(chapter_url):
         
         ffmpeg_tasks.append((cmd, v_out))
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:
-        [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
     # 8. Stitching
     print(f"[{chap_num}] Stitching...")
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
         f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
-
-    final_name = f"{manga_name}_ch{chap_num}.mp4"
-    final_path = os.path.join(current_chap_dir, "video.mp4")
     
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", final_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
-    # Copy to "videos/" to satisfy Git pathspec requirements
-    shutil.copy(final_path, os.path.join("videos", final_name))
+    # Copy to "videos/" global folder
+    shutil.copy(final_path, global_video_path)
     
     with open(highest_file, "w") as f: f.write(str(chap_num))
     shutil.rmtree(temp_dir, ignore_errors=True)
-    return next_url
+    
+    return next_url, False # False means it was NOT skipped (it processed normally)
 
 # ================= MAIN LOOP =================
 if not os.path.exists("kokoro-v1.0.onnx"):
@@ -259,10 +280,17 @@ if not os.path.exists("voices-v1.0.bin"):
 
 current_target = START_URL
 processed = 0
+
 while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
     try:
-        current_target = process_chapter(current_target)
-        processed += 1
+        current_target, skipped = process_chapter(current_target)
+        
+        # Only increment the 'processed' count if a NEW chapter was actually generated.
+        if not skipped:
+            processed += 1
+            
     except Exception as e:
         print(f"Error: {e}")
         break
+
+print("\nRecap process finished.")
