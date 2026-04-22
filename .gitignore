@@ -3,4 +3,3 @@
 *.bin
 __pycache__/
 videos/
-*.mp4
