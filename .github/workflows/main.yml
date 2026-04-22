@@ -28,10 +28,13 @@ jobs:
             voices-v1.0.bin
           key: kokoro-models-v1.0
 
+      # >>> THE FIX IS HERE <<<
       - name: Install System Dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb ffmpeg espeak-ng
+          sudo apt-get update -qq
+          sudo apt-get install -yq --no-install-recommends xvfb ffmpeg espeak-ng
 
       - name: Install Python Dependencies
         run: |
@@ -44,7 +47,6 @@ jobs:
         run: |
           python recap.py
 
-      # Changed to catch ALL mp4 files (chapter videos AND full recap)
       - name: Upload Generated Artifacts
         if: always() 
         uses: actions/upload-artifact@v4
@@ -54,7 +56,6 @@ jobs:
             **/*.mp4
             **/*.txt
 
-      # Added *.mp4 to .gitignore so Git only saves text/lore updates!
       - name: Commit and Push Lore
         if: always()
         run: |
