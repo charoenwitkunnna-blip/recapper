@@ -27,7 +27,7 @@ url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS = []
+GEMINI_API_KEYS =[]
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -164,7 +164,6 @@ def process_chapter(chapter_url):
             return (idx, raw_path, ai_h, {"text": f"Image Index: {idx}"}, {"inline_data": {"mime_type": "image/jpeg", "data": b64}})
         except: return None
 
-    # PERFORMANCE BOOST 3: Increased max_workers to 25 to fetch images nearly instantly
     with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
         results =[r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
     results.sort(key=lambda x: x[0])
@@ -264,7 +263,6 @@ def process_chapter(chapter_url):
         bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
         crop = raw.crop((0, top_px, raw.width, bottom_px))
         
-        # TTS Generation
         samples, _ = kokoro.create(block['narration'], voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
         audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
         sf.write(audio_path, samples, 24000)
@@ -279,41 +277,51 @@ def process_chapter(chapter_url):
         aspect_ratio = crop.height / crop.width
         effect = block.get('effect', 'zoom_in').lower()
 
-        # PERFORMANCE BOOST 2: Preset set to 'ultrafast' for pure speed
         common_flags =["-c:v", "libx264", "-preset", "ultrafast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
-        # YOUTUBE FULL SCREEN RESOLUTION (1920x1080)
-        if effect == 'pan_down' and aspect_ratio > 0.6:
-            # Panning: Resize width to 1920 so the comic completely fills the horizontal screen!
-            pan_h = max(1080, int(1920 * aspect_ratio))
-            crop.resize((1920, pan_h), Image.Resampling.LANCZOS).save(f_path)
+        # --- FIXED: Panning now keeps proportions and uses blurred side backgrounds! ---
+        if effect == 'pan_down' and aspect_ratio > 1.2:
+            target_w = 1080 # Keeps the comic width reasonable for a 16:9 video
+            target_h = int(target_w * aspect_ratio)
+            
+            # Create a tall background with blurred edges filling 1920x(height)
+            bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
+            fg = crop.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            bg.paste(fg, ((1920 - target_w) // 2, 0)) # Paste comic in the dead center
+            bg.save(f_path)
+            
             cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
                    "-vf", f"crop=1920:1080:0:min(in_h-1080\\,(in_h-1080)*(t/{video_dur})),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
                    
-        elif effect == 'pan_up' and aspect_ratio > 0.6:
-            pan_h = max(1080, int(1920 * aspect_ratio))
-            crop.resize((1920, pan_h), Image.Resampling.LANCZOS).save(f_path)
+        elif effect == 'pan_up' and aspect_ratio > 1.2:
+            target_w = 1080
+            target_h = int(target_w * aspect_ratio)
+            
+            bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
+            fg = crop.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            bg.paste(fg, ((1920 - target_w) // 2, 0)) 
+            bg.save(f_path)
+            
             cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
                    "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-(in_h-1080)*(t/{video_dur})),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
                    
         else:
-            # Zooming: Fill the 1920x1080 background with a heavily blurred version of the panel (ZERO black spaces!)
+            # Zooming (or fallback if the image isn't tall enough to pan smoothly)
             bg = crop.resize((1920, 1080)).filter(ImageFilter.GaussianBlur(40))
             s_w = int(crop.width * min(1920/crop.width, 1080/crop.height))
             s_h = int(crop.height * min(1920/crop.width, 1080/crop.height))
             bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920-s_w)//2, (1080-s_h)//2))
             bg.save(f_path)
 
-            if effect == 'zoom_out':
+            if effect == 'zoom_out' or effect == 'pan_up': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
                        "-vf", f"scale=2880x1620,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-            else: # zoom_in
+            else: 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
                        "-vf", f"scale=2880x1620,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
         return (cmd, v_out)
 
-    # PERFORMANCE BOOST 1: Parallel TTS Generation and Image Manipulation
     ffmpeg_tasks =[]
     with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as ex:
         results = ex.map(lambda p: prepare_panel_assets(p[0], p[1]), enumerate(script_data['panels']))
@@ -321,9 +329,7 @@ def process_chapter(chapter_url):
             if res: ffmpeg_tasks.append(res)
 
     print(f"[{chap_num}] Rendering Synced Clips with FFmpeg...")
-    # Parallel FFmpeg Rendering
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:
-        [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
     # 8. Stitching Chapter
     print(f"[{chap_num}] Stitching Chapter...")
