@@ -1,2 +1,1 @@
-<video src="https://github.com/charoenwitkunnna-blip/recapper/blob/main/videos/final_recap.mp4" controls="controls" style="max-width: 100%;">
-</video>
+[▶️ Click to Play Video](https://github.com/charoenwitkunnna-blip/recapper/raw/main/videos/final_recap.mp4)
