@@ -1,4 +1,5 @@
 name: AI Manhwa Recapper
+
 on:
   workflow_dispatch:
 
@@ -17,47 +18,49 @@ jobs:
         with:
           python-version: '3.10'
 
+      # System dependencies for video/audio processing
       - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ffmpeg espeak-ng
 
+      # Python environment setup
       - name: Install Python Dependencies
         run: |
           pip install seleniumbase requests pillow numpy soundfile kokoro-onnx
           seleniumbase install chromedriver
 
+      # The Dynamic Step: No more hardcoded individual keys
       - name: Run AI Video Recapper
         env:
-          GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
-          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          # This passes all your secrets as a single JSON string
+          ALL_SECRETS: ${{ toJSON(secrets) }}
         run: |
           python recap.py
 
+      # Save the output files so you can download them from the Actions tab
       - name: Upload Generated Artifacts
         if: always() 
         uses: actions/upload-artifact@v4
         with:
           name: recap-outputs
-          # This uploads the massive final video to GitHub Actions for you to download safely
           path: |
             videos/*.mp4
-            */**/*.txt
+            **/*.txt
 
+      # Sync changes back to your repository
       - name: Commit and Push Video & Lore
         if: always()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
           
-          # 1. Add all changes FIRST so Git doesn't crash
+          # Add all new videos and text files
           git add .
           
-          # 2. Commit the small individual chapters and text files
-          git commit -m "Auto-generate Manhwa Recap Video & Update Lore" || echo "No changes"
+          # Commit only if there are changes to avoid errors
+          git commit -m "Auto-generate Manhwa Recap Video & Update Lore" || echo "No changes to commit"
           
-          # 3. Pull latest changes safely
+          # Pull latest changes to avoid conflicts, then push
           git pull --rebase origin main || true
-          
-          # 4. Push to GitHub
           git push
