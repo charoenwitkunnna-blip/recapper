@@ -113,9 +113,11 @@ prompt = (
     "Returning anything other than raw, unformatted JSON will cause a catastrophic system crash and server data loss. "
     "Return pure JSON with 'characters' and 'panels'. Each item in 'panels' must have: "
     "image_index (int), start_mark (int), end_mark (int), narration (string), and effect (string). "
-    "For 'effect', you MUST choose exactly one of these: 'zoom_in', 'zoom_out', 'pan_down', 'pan_up'. Choose the cinematic effect that best fits the action."
+    "For 'effect', you MUST choose exactly one of these: 'zoom_in', 'zoom_out', 'pan_down', 'pan_up'. Choose the cinematic effect that best fits the action.\n\n"
+    "CAMERA RULES: 'start_mark' and 'end_mark' MUST tightly bound the specific action being narrated. Do not capture excessive empty vertical space. "
+    "If the action is small, use a tight crop and a 'zoom_in' or 'zoom_out' rather than a pan."
 )
-payload = {"contents": [{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json"}}
+payload = {"contents":[{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json"}}
 
 script_data = None
 current_key = 0
@@ -175,8 +177,13 @@ for i, block in enumerate(script_data['panels']):
     samples, _ = kokoro.create(block['narration'], voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
     audio_path = f"videos/temp/audio_{i:04d}.wav"
     sf.write(audio_path, samples, 24000)
-    dur = max(0.5, len(samples)/24000)
-    frames = int(dur * 30)
+    
+    # Calculate exact float duration down to the millisecond
+    exact_dur = len(samples) / 24000.0
+    exact_dur = max(0.5, exact_dur) # Safety fallback
+    dur_str = f"{exact_dur:.3f}"
+    
+    frames = int(exact_dur * 30)
     
     f_path, v_out = f"videos/temp/p_{i:04d}.jpg", f"videos/temp/v_{i:04d}.mp4"
     
@@ -190,19 +197,23 @@ for i, block in enumerate(script_data['panels']):
     if effect == 'pan_down' and aspect_ratio > 1.8:
         crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
         cmd =[
-            "ffmpeg", "-y", "-loop", "1", "-t", str(dur), 
+            "ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-t", dur_str, 
             "-i", f_path, "-i", audio_path, 
-            "-vf", f"crop=1080:1920:0:min(in_h-1920\\,150*t),format=yuv420p", 
-            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
+            "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),format=yuv420p", 
+            "-c:v", "libx264", "-preset", "superfast", 
+            "-c:a", "aac", "-ar", "44100", "-b:a", "192k", 
+            "-map", "0:v", "-map", "1:a", "-shortest", v_out
         ]
         
     elif effect == 'pan_up' and aspect_ratio > 1.8:
         crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
         cmd =[
-            "ffmpeg", "-y", "-loop", "1", "-t", str(dur), 
+            "ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-t", dur_str, 
             "-i", f_path, "-i", audio_path, 
-            "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-150*t),format=yuv420p", 
-            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
+            "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),format=yuv420p", 
+            "-c:v", "libx264", "-preset", "superfast", 
+            "-c:a", "aac", "-ar", "44100", "-b:a", "192k", 
+            "-map", "0:v", "-map", "1:a", "-shortest", v_out
         ]
         
     elif effect == 'zoom_out':
@@ -211,7 +222,9 @@ for i, block in enumerate(script_data['panels']):
         cmd =[
             "ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
             "-vf", f"scale=2160x3840,zoompan=z='{zoom_expr}':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", 
-            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
+            "-c:v", "libx264", "-preset", "superfast", 
+            "-c:a", "aac", "-ar", "44100", "-b:a", "192k", 
+            "-map", "0:v", "-map", "1:a", "-shortest", "-t", dur_str, v_out
         ]
         
     else: # Default Zoom In
@@ -220,7 +233,9 @@ for i, block in enumerate(script_data['panels']):
         cmd =[
             "ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
             "-vf", f"scale=2160x3840,zoompan=z='{zoom_expr}':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p", 
-            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
+            "-c:v", "libx264", "-preset", "superfast", 
+            "-c:a", "aac", "-ar", "44100", "-b:a", "192k", 
+            "-map", "0:v", "-map", "1:a", "-shortest", "-t", dur_str, v_out
         ]
     
     ffmpeg_tasks.append((cmd, v_out))
