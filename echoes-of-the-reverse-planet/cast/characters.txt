@@ -13,3 +13,8 @@ Role: The primary antagonist during the initial escape attempt.
 Appearance: A massive, muscular man with spiked red hair, wearing a high-tech guard suit and tactical goggles.
 Personality: Cruel, arrogant, and sadistic, enjoying the slaughter of weak test subjects.
 --------------------
+Name: Masked Scientists
+Role: The administrative enforcers of Project: Transcendence.
+Appearance: Wearing white hazmat suits and black gas masks, often carrying electronic tablets.
+Personality: Cold, detached, and viewing human subjects as mere data points.
+--------------------
