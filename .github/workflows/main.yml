@@ -29,11 +29,9 @@ jobs:
           key: kokoro-models-v1.0
 
       - name: Install System Dependencies
-        env:
-          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -yq --no-install-recommends xvfb ffmpeg espeak-ng
+          sudo apt-get update
+          sudo apt-get install -y xvfb ffmpeg espeak-ng
 
       - name: Install Python Dependencies
         run: |
@@ -46,32 +44,26 @@ jobs:
         run: |
           python recap.py
 
-      - name: Upload Full Recap as Artifact
+      # Changed to catch ALL mp4 files (chapter videos AND full recap)
+      - name: Upload Generated Artifacts
         if: always() 
         uses: actions/upload-artifact@v4
         with:
-          name: full-recap-video
-          # This only grabs the videos inside the "videos" folder (like full_recap.mp4)
-          path: videos/*.mp4
-          retention-days: 5 
+          name: recap-outputs
+          path: |
+            **/*.mp4
+            **/*.txt
 
-      - name: Commit and Push Chapter Progress
+      # Added *.mp4 to .gitignore so Git only saves text/lore updates!
+      - name: Commit and Push Lore
         if: always()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
           
-          # 1. Ignore the videos/ folder (which holds the massive full recaps)
-          # 2. Ignore temporary script outputs and models
-          echo "videos/" >> .gitignore
-          echo "*/temp/" >> .gitignore
-          echo "*.onnx" >> .gitignore
-          echo "*.bin" >> .gitignore
+          echo "*.mp4" >> .gitignore
           
-          # Now it is safe to git add everything else. 
-          # This WILL include manga_name/chapters/1/video.mp4 and your .txt lore files!
           git add .
-          
-          git commit -m "Update chapter videos and lore" || echo "No changes to commit"
+          git commit -m "Update Manhwa Lore and Progress" || echo "No changes to commit"
           git pull --rebase origin main || true
-          git push origin main
+          git push
