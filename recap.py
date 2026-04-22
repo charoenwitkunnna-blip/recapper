@@ -20,7 +20,7 @@ from kokoro_onnx import Kokoro
 START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 VOICE_MODEL = "am_adam"  
 AUDIO_SPEED = 1.0    
-MAX_CHAPTERS_TO_PROCESS = 30
+MAX_CHAPTERS_TO_PROCESS = 1
 
 # Extract Manga Name globally so it can be used for final stitching
 url_parts =[p for p in START_URL.split('/') if p]
