@@ -17,11 +17,11 @@ import math
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
-START_URL = "https://manhuaus.com/manga/echoes-of-the-reverse-planet/chapter-0/"
-MAX_CHAPTERS_TO_PROCESS = 1 
+START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
+MAX_CHAPTERS_TO_PROCESS = "all"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS =[]
+GEMINI_API_KEYS = []
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -59,7 +59,7 @@ os.makedirs("videos", exist_ok=True)
 
 if not os.path.exists(".gitignore"):
     with open(".gitignore", "w") as f:
-        f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\nvideos/\n")
+        f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\n")
 
 # Font Setup
 font_path = "Roboto-Black.ttf"
@@ -92,7 +92,7 @@ def process_chapter(chapter_url):
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
 
-    # 2. Setup Dynamic Directories 
+    # 2. Setup Dynamic Directories (manga_name/chapters/1/)
     base_dir = manga_name
     cast_dir = os.path.join(base_dir, "cast")
     chapters_dir = os.path.join(base_dir, "chapters")
@@ -104,10 +104,14 @@ def process_chapter(chapter_url):
 
     char_file = os.path.join(cast_dir, "characters.txt")
     highest_file = os.path.join(chapters_dir, "highest.txt")
+    
+    # Video Output Paths
+    final_name = f"{manga_name}_ch{chap_num}.mp4"
     final_path = os.path.join(current_chap_dir, "video.mp4")
+    global_video_path = os.path.join("videos", final_name)
 
     # ================= RESUME CHECK =================
-    if os.path.exists(final_path):
+    if os.path.exists(final_path) or os.path.exists(global_video_path):
         print(f"[{chap_num}] Video already exists! Skipping AI & Rendering to continue recap...")
         next_url = None
         with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
@@ -230,7 +234,7 @@ def process_chapter(chapter_url):
                                 "narration": {"type": "STRING"},
                                 "effect": {"type": "STRING"}
                             },
-                            "required": ["image_index", "start_mark", "end_mark", "narration", "effect"]
+                            "required":["image_index", "start_mark", "end_mark", "narration", "effect"]
                         }
                     }
                 },
@@ -273,7 +277,7 @@ def process_chapter(chapter_url):
             print(f"TTS Error on panel {idx}: {e}. Creating silent audio.")
             return idx, np.zeros(24000)
 
-    # Process audio generation concurrently (Batch Processing)
+    # Process audio generation concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as executor:
         voice_tasks =[]
         for i, block in enumerate(script_data.get('panels',[])):
@@ -292,7 +296,7 @@ def process_chapter(chapter_url):
 
     # 8. Rendering & Clip Assembly
     print(f"[{chap_num}] Creating Video Instructions...")
-    ffmpeg_tasks = []
+    ffmpeg_tasks =[]
 
     for i, block in enumerate(script_data.get('panels',[])):
         img_idx = block.get('image_index')
@@ -339,22 +343,24 @@ def process_chapter(chapter_url):
             if effect == 'zoom_out':
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
             else: 
-                cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
         
         ffmpeg_tasks.append((cmd, v_out))
 
     # Parallel Video Rendering
     print(f"[{chap_num}] Rendering Video Elements in Parallel...")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:
-        [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
-    # 9. Stitching
+    # 9. Stitching Chapter
     print(f"[{chap_num}] Stitching Chapter Video...")
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
         f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
     
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", final_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    # Push a copy of the finalized video to the global 'videos/' folder for easy viewing/resuming
+    shutil.copy(final_path, global_video_path)
     
     with open(highest_file, "w") as f: f.write(str(chap_num))
     shutil.rmtree(temp_dir, ignore_errors=True)
@@ -371,11 +377,10 @@ def stitch_all_chapters(manga_name):
     valid_chaps =[]
     
     for d in chap_dirs:
-        vid_path = os.path.join(chapters_dir, d, "video.mp4")
-        if os.path.exists(vid_path):
-            num_match = re.search(r'\d+', d)
-            num = int(num_match.group(0)) if num_match else 0
-            valid_chaps.append((num, vid_path))
+        if re.fullmatch(r'\d+', d):  # Ensure directory is just numbers (1, 2, 3...)
+            vid_path = os.path.join(chapters_dir, d, "video.mp4")
+            if os.path.exists(vid_path):
+                valid_chaps.append((int(d), vid_path))
             
     valid_chaps.sort(key=lambda x: x[0])
     if not valid_chaps: return
@@ -393,7 +398,7 @@ def stitch_all_chapters(manga_name):
     if os.path.exists(list_path): os.remove(list_path)
 
 # ================= MAIN EXECUTION LOOP =================
-url_parts_for_name = [p for p in START_URL.split('/') if p]
+url_parts_for_name =[p for p in START_URL.split('/') if p]
 target_manga_name = url_parts_for_name[-2] if len(url_parts_for_name) >= 2 else "manga"
 
 current_target = START_URL
