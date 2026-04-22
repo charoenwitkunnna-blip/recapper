@@ -18,7 +18,7 @@ from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
 START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
-MAX_CHAPTERS_TO_PROCESS = 1
+MAX_CHAPTERS_TO_PROCESS = 3
 
 # --- DYNAMIC API KEY EXTRACTION ---
 GEMINI_API_KEYS = []
