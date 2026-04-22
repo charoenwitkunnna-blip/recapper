@@ -1,0 +1,20 @@
+Name: Arian Shirone
+Role: The Protagonist
+Appearance: A 12-year-old boy with messy blonde hair and large, expressive blue eyes. He wears simple brown commoner clothes.
+Personality: Incredibly curious, studious, and determined. Despite his social status, he possesses a deep passion for knowledge and magic.
+--------------------
+Name: Arian Vincent
+Role: Shirone's Adoptive Father
+Appearance: A 40-year-old man with a massive, muscular build, long brown hair, and a rugged beard. He is often seen carrying a large axe.
+Personality: A gruff but deeply loving father. He is protective of Shirone and works hard as a lumberjack to support his son's education.
+--------------------
+Name: Olina
+Role: Shirone's Adoptive Mother
+Appearance: A kind-faced woman with long reddish-brown hair.
+Personality: Gentle and nurturing, she shares a deep bond with her husband and son.
+--------------------
+Name: Myrhe Alpheas
+Role: Headmaster of Alpheas Magic Academy
+Appearance: An elderly man with a long white beard, wearing ornate blue and black mage robes.
+Personality: Wise, perceptive, and encouraging. He values 'insight' over traditional metrics like money or status.
+--------------------
