@@ -64,7 +64,7 @@ headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
 def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
-    url_parts =[p for p in chapter_url.split('/') if p]
+    url_parts = [p for p in chapter_url.split('/') if p]
     chapter_str = url_parts[-1] 
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
@@ -75,7 +75,7 @@ def process_chapter(chapter_url):
     current_chap_dir = os.path.join(chapters_dir, chap_num)
     temp_dir = os.path.join(base_dir, "temp")
 
-    for d in [cast_dir, chapters_dir, current_chap_dir, temp_dir]:
+    for d in[cast_dir, chapters_dir, current_chap_dir, temp_dir]:
         os.makedirs(d, exist_ok=True)
 
     char_file = os.path.join(cast_dir, "characters.txt")
@@ -151,11 +151,28 @@ def process_chapter(chapter_url):
         parts.extend([t, i])
 
     print(f"[{chap_num}] AI Writing Script...")
+    
+    # ================= IMPROVED PROMPT INTEGRATION =================
     prompt = (
-        "Act as a professional Manhwa recap scriptwriter. Analyze images and use yellow markers for scene marks.\n\n"
-        f"EXISTING CHARACTER LORE:\n{existing_chars_text if existing_chars_text else 'None.'}\n\n"
-        "GUIDELINES: Identify new characters. Write dynamic script. Select pan for tall strips, zoom for short ones."
+        "Act as a professional Manhwa recap scriptwriter. Follow strict high-energy rules for YouTube/TikTok.\n\n"
+        "CRITICAL INSTRUCTION: DO NOT output markdown blocks (like ```json). Return pure JSON format ONLY.\n\n"
+        f"EXISTING CHARACTER LORE DATABASE:\n{existing_chars_text if existing_chars_text else 'None yet.'}\n\n"
+        "NARRATION RULES:\n"
+        "- Hook the viewer immediately.\n"
+        "- Use dramatic pacing, active voice, and high-energy storytelling.\n"
+        "- Describe character actions, emotions, and plot twists dynamically.\n\n"
+        "CAMERA & MARKER RULES:\n"
+        "- Look at the images provided. There are yellow numbers acting as markers along the left edge.\n"
+        "- 'start_mark' and 'end_mark' MUST correspond to these yellow numbers and tightly bound the specific action being narrated to prevent excessive/awkward panning.\n"
+        "- If an action spans a short vertical space, use 'zoom_in' or 'zoom_out'.\n"
+        "- If an action spans a large vertical space, use 'pan_down' or 'pan_up'.\n\n"
+        "JSON SCHEMA REQUIREMENT:\n"
+        "Return pure JSON with 'new_characters' (only characters that are NOT in the database above) and 'panels'.\n"
+        "Each item in 'new_characters' must have: 'name', 'appearance', 'role', 'personality'.\n"
+        "Each item in 'panels' must have: image_index (int), start_mark (number), end_mark (number), narration (string), effect ('zoom_in', 'zoom_out', 'pan_down', 'pan_up')."
     )
+    # ===============================================================
+
     schema = {
         "type": "OBJECT",
         "properties": {
@@ -163,7 +180,7 @@ def process_chapter(chapter_url):
             "panels": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {"image_index": {"type": "INTEGER"}, "start_mark": {"type": "NUMBER"}, "end_mark": {"type": "NUMBER"}, "narration": {"type": "STRING"}, "effect": {"type": "STRING", "enum":["zoom_in", "zoom_out", "pan_down", "pan_up"]}}, "required":["image_index", "start_mark", "end_mark", "narration", "effect"]}}
         }, "required":["new_characters", "panels"]
     }
-    payload = {"contents":[{"parts":[{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
+    payload = {"contents": [{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
     script_data, current_key = None, 0
     for _ in range(15):
         res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
@@ -215,7 +232,7 @@ def process_chapter(chapter_url):
 
         # OLD LOGIC FIXED SPEED & ZOOM APPLIED TO 16:9 (1920x1080)
         if target_h > 1200:
-            if effect not in ['pan_up', 'pan_down']: effect = 'pan_down'
+            if effect not in['pan_up', 'pan_down']: effect = 'pan_down'
             
             # 1920-wide canvas with the Manhwa centered
             bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
