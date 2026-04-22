@@ -27,7 +27,7 @@ url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS =[]
+GEMINI_API_KEYS = []
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -43,7 +43,7 @@ if all_secrets_raw:
     except json.JSONDecodeError:
         print("Warning: ALL_SECRETS was found but could not be parsed as JSON.")
 
-# 2. Fallback for Local Development (Standard Environment Variables)
+# 2. Fallback for Local Development
 if not temp_keys:
     for key, value in os.environ.items():
         match = pattern.fullmatch(key)
@@ -54,11 +54,10 @@ if not temp_keys:
 temp_keys.sort(key=lambda x: x[0])
 for _, key_value in temp_keys:
     GEMINI_API_KEYS.append(key_value)
-# Ensure essential global folders exist
+    
 os.makedirs("videos", exist_ok=True)
 
-# VERY IMPORTANT: Protect Git repo from the 100MB crash limit!
-# We tell Git to ALWAYS IGNORE the massive final stitched videos folder.
+# Protect Git repo from the 100MB crash limit!
 with open(".gitignore", "w") as f:
     f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\nvideos/\n")
 
@@ -73,13 +72,11 @@ headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
     
-    # 1. Parse URL for naming
     url_parts =[p for p in chapter_url.split('/') if p]
     chapter_str = url_parts[-1] 
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
 
-    # 2. Setup Dynamic Directories (Create if they don't exist)
     base_dir = MANGA_NAME
     cast_dir = os.path.join(base_dir, "cast")
     chapters_dir = os.path.join(base_dir, "chapters")
@@ -91,13 +88,11 @@ def process_chapter(chapter_url):
 
     char_file = os.path.join(cast_dir, "characters.txt")
     highest_file = os.path.join(chapters_dir, "highest.txt")
-    
-    # Video Output Path (Only saved inside the chapter folder now)
     final_path = os.path.join(current_chap_dir, "video.mp4")
 
     # ================= RESUME CHECK =================
     if os.path.exists(final_path):
-        print(f"[{chap_num}] Video already exists in chapter folder! Skipping AI & Rendering to continue recap...")
+        print(f"[{chap_num}] Video already exists! Skipping AI & Rendering to continue recap...")
         next_url = None
         with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
             sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
@@ -109,16 +104,14 @@ def process_chapter(chapter_url):
             except: 
                 print(f"[{chap_num}] 🛑 'Manga Info' button detected. All caught up!")
                 next_url = None
-        return next_url, True  # True means it was skipped
+        return next_url, True  
     # ================================================
 
-    # 3. Load existing lore
     existing_chars_text = ""
     if os.path.exists(char_file):
         with open(char_file, "r", encoding="utf-8") as f:
             existing_chars_text = f.read()
 
-    # 4. Scrape Chapter and Next Link
     print(f"[{chap_num}] Scraping Images & Next Link...")
     image_urls, site_cookies, next_url =[], {}, None
     with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
@@ -171,7 +164,8 @@ def process_chapter(chapter_url):
             return (idx, raw_path, ai_h, {"text": f"Image Index: {idx}"}, {"inline_data": {"mime_type": "image/jpeg", "data": b64}})
         except: return None
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    # PERFORMANCE BOOST 3: Increased max_workers to 25 to fetch images nearly instantly
+    with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
         results =[r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
     results.sort(key=lambda x: x[0])
 
@@ -179,18 +173,64 @@ def process_chapter(chapter_url):
         original_files[idx], ai_heights[idx] = path, h
         parts.extend([t, i])
 
-    # 6. AI Scripting with Lore
+    # 6. AI Scripting
     print(f"[{chap_num}] AI Writing Script...")
     prompt = (
-        "Act as a professional Manhwa recap scriptwriter. Return pure JSON format ONLY.\n"
+        "Act as a professional Manhwa recap scriptwriter. Analyze the provided image strips and generate an engaging recap.\n\n"
         f"EXISTING CHARACTER LORE:\n{existing_chars_text if existing_chars_text else 'None.'}\n\n"
-        "Return JSON with 'new_characters' (list of name, appearance, role, personality) and 'panels'.\n"
-        "Each 'panels' item: image_index, start_mark, end_mark, narration, effect (zoom_in, zoom_out, pan_down, pan_up)."
+        "GUIDELINES:\n"
+        "1. Identify any new characters not in the existing lore. Note their appearance, role, and personality.\n"
+        "2. Break the action down into sequential panels using the provided 'Image Index'.\n"
+        "3. Use the yellow visual markers (0, 10, 20, etc.) drawn on the left side of the images to determine the 'start_mark' and 'end_mark' for each scene.\n"
+        "4. Write dynamic, dramatic narration explaining what is happening.\n"
+        "5. Select the most appropriate camera effect for the scene's action."
     )
     
-    payload = {"contents":[{"parts":[{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json"}}
-    script_data, current_key = None, 0
+    schema = {
+        "type": "OBJECT",
+        "properties": {
+            "new_characters": {
+                "type": "ARRAY",
+                "description": "List of newly introduced characters in this chapter. Leave empty if none.",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "name": {"type": "STRING"},
+                        "appearance": {"type": "STRING"},
+                        "role": {"type": "STRING"},
+                        "personality": {"type": "STRING"}
+                    },
+                    "required":["name", "appearance", "role", "personality"]
+                }
+            },
+            "panels": {
+                "type": "ARRAY",
+                "description": "Sequential script blocks mapped to the images.",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "image_index": {"type": "INTEGER"},
+                        "start_mark": {"type": "NUMBER"},
+                        "end_mark": {"type": "NUMBER"},
+                        "narration": {"type": "STRING"},
+                        "effect": {
+                            "type": "STRING",
+                            "enum":["zoom_in", "zoom_out", "pan_down", "pan_up"], 
+                        }
+                    },
+                    "required":["image_index", "start_mark", "end_mark", "narration", "effect"]
+                }
+            }
+        },
+        "required":["new_characters", "panels"]
+    }
+
+    payload = {
+        "contents":[{"parts": [{"text": prompt}] + parts}], 
+        "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}
+    }
     
+    script_data, current_key = None, 0
     for _ in range(15):
         res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
         if res.status_code == 200:
@@ -200,25 +240,23 @@ def process_chapter(chapter_url):
                 if start_idx != -1 and end_idx != -1:
                     script_data = json.loads(raw_text[start_idx:end_idx+1])
                     break 
-            except: pass
+            except Exception as e: pass
         current_key = (current_key + 1) % len(GEMINI_API_KEYS)
 
     if not script_data: return next_url, False
 
-    # Update Lore File
     if script_data.get('new_characters'):
         with open(char_file, "a", encoding="utf-8") as f:
             for c in script_data['new_characters']:
                 f.write(f"Name: {c.get('name')}\nRole: {c.get('role')}\nAppearance: {c.get('appearance')}\nPersonality: {c.get('personality')}\n{'-'*20}\n")
 
-    # 7. Rendering
-    print(f"[{chap_num}] Rendering Synced Clips...")
+    # 7. Rendering (HIGH PERFORMANCE + FULL SCREEN YOUTUBE 16:9)
+    print(f"[{chap_num}] Preparing Audio & Assets Concurrently...")
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
-    ffmpeg_tasks = []
-
-    for i, block in enumerate(script_data['panels']):
+    
+    def prepare_panel_assets(i, block):
         img_idx = block.get('image_index')
-        if img_idx not in original_files: continue
+        if img_idx not in original_files: return None
             
         raw = Image.open(original_files[img_idx])
         scale = raw.height / ai_heights[img_idx]
@@ -226,6 +264,7 @@ def process_chapter(chapter_url):
         bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
         crop = raw.crop((0, top_px, raw.width, bottom_px))
         
+        # TTS Generation
         samples, _ = kokoro.create(block['narration'], voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
         audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
         sf.write(audio_path, samples, 24000)
@@ -238,30 +277,52 @@ def process_chapter(chapter_url):
         v_out = os.path.join(temp_dir, f"v_{i:04d}.mov") 
         
         aspect_ratio = crop.height / crop.width
-        bg = crop.resize((1080, 1920)).filter(ImageFilter.GaussianBlur(35))
-        s_w, s_h = int(crop.width * min(1080/crop.width, 1920/crop.height)), int(crop.height * min(1080/crop.width, 1920/crop.height))
-        bg.paste(crop.resize((s_w, s_h)), ((1080-s_w)//2, (1920-s_h)//2))
-
         effect = block.get('effect', 'zoom_in').lower()
 
-        common_flags =["-c:v", "libx264", "-preset", "superfast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
+        # PERFORMANCE BOOST 2: Preset set to 'ultrafast' for pure speed
+        common_flags =["-c:v", "libx264", "-preset", "ultrafast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
-        if effect == 'pan_down' and aspect_ratio > 1.8:
-            crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-        elif effect == 'pan_up' and aspect_ratio > 1.8:
-            crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-        elif effect == 'zoom_out':
+        # YOUTUBE FULL SCREEN RESOLUTION (1920x1080)
+        if effect == 'pan_down' and aspect_ratio > 0.6:
+            # Panning: Resize width to 1920 so the comic completely fills the horizontal screen!
+            pan_h = max(1080, int(1920 * aspect_ratio))
+            crop.resize((1920, pan_h), Image.Resampling.LANCZOS).save(f_path)
+            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
+                   "-vf", f"crop=1920:1080:0:min(in_h-1080\\,(in_h-1080)*(t/{video_dur})),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                   
+        elif effect == 'pan_up' and aspect_ratio > 0.6:
+            pan_h = max(1080, int(1920 * aspect_ratio))
+            crop.resize((1920, pan_h), Image.Resampling.LANCZOS).save(f_path)
+            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
+                   "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-(in_h-1080)*(t/{video_dur})),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                   
+        else:
+            # Zooming: Fill the 1920x1080 background with a heavily blurred version of the panel (ZERO black spaces!)
+            bg = crop.resize((1920, 1080)).filter(ImageFilter.GaussianBlur(40))
+            s_w = int(crop.width * min(1920/crop.width, 1080/crop.height))
+            s_h = int(crop.height * min(1920/crop.width, 1080/crop.height))
+            bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920-s_w)//2, (1080-s_h)//2))
             bg.save(f_path)
-            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
-        else: 
-            bg.save(f_path)
-            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
-        
-        ffmpeg_tasks.append((cmd, v_out))
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:
+            if effect == 'zoom_out':
+                cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
+                       "-vf", f"scale=2880x1620,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            else: # zoom_in
+                cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
+                       "-vf", f"scale=2880x1620,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+        
+        return (cmd, v_out)
+
+    # PERFORMANCE BOOST 1: Parallel TTS Generation and Image Manipulation
+    ffmpeg_tasks =[]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as ex:
+        results = ex.map(lambda p: prepare_panel_assets(p[0], p[1]), enumerate(script_data['panels']))
+        for res in results:
+            if res: ffmpeg_tasks.append(res)
+
+    print(f"[{chap_num}] Rendering Synced Clips with FFmpeg...")
+    # Parallel FFmpeg Rendering
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:
         [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
     # 8. Stitching Chapter
@@ -275,14 +336,10 @@ def process_chapter(chapter_url):
     with open(highest_file, "w") as f: f.write(str(chap_num))
     shutil.rmtree(temp_dir, ignore_errors=True)
     
-    return next_url, False # False means it was NOT skipped (it processed normally)
+    return next_url, False
 
 
 def stitch_all_chapters():
-    """
-    Looks through the manga's chapters directory, finds all individual video.mp4 files,
-    sorts them chronologically, and stitches them into ONE massive recap video in the /videos/ folder.
-    """
     print(f"\n{'='*50}\n[FINALIZING] Stitching Full Series Recap\n{'='*50}")
     chapters_dir = os.path.join(MANGA_NAME, "chapters")
     if not os.path.exists(chapters_dir):
@@ -295,12 +352,10 @@ def stitch_all_chapters():
     for d in chap_dirs:
         vid_path = os.path.join(chapters_dir, d, "video.mp4")
         if os.path.exists(vid_path):
-            # Extract number so chapter 2 comes before chapter 10
             num_match = re.search(r'\d+', d)
             num = int(num_match.group(0)) if num_match else 0
             valid_chaps.append((num, vid_path))
             
-    # Sort by chapter number
     valid_chaps.sort(key=lambda x: x[0])
     
     if not valid_chaps:
@@ -310,13 +365,11 @@ def stitch_all_chapters():
     list_path = os.path.join(MANGA_NAME, "full_recap_list.txt")
     with open(list_path, "w") as f:
         for num, vp in valid_chaps:
-            # Absolute path with safe slashes for ffmpeg concat
             f.write(f"file '{os.path.abspath(vp).replace(chr(92), '/')}'\n")
             
     final_recap_name = f"{MANGA_NAME}_full_recap.mp4"
     final_recap_path = os.path.join("videos", final_recap_name)
     
-    # Fast Concat without re-encoding (-c copy)
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", final_recap_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
     print(f"SUCCESS: Stitched {len(valid_chaps)} chapters into {final_recap_path}")
@@ -335,16 +388,11 @@ processed = 0
 while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
     try:
         current_target, skipped = process_chapter(current_target)
-        
         if not skipped:
             processed += 1
-            
     except Exception as e:
         print(f"Error: {e}")
         break
 
-# Once the loop breaks (hit Max Chapters or Manga Info caught up)
-# Gather all chapters ever generated and stitch them into the main /videos/ folder
 stitch_all_chapters()
-
 print("\nRecap process finished.")
