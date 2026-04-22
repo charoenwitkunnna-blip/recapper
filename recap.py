@@ -18,7 +18,7 @@ from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
 START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
-MAX_CHAPTERS_TO_PROCESS = 1
+MAX_CHAPTERS_TO_PROCESS = 30
 
 # Extract Manga Name globally so it can be used for final stitching
 url_parts =[p for p in START_URL.split('/') if p]
