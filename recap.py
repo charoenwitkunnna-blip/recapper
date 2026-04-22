@@ -17,8 +17,8 @@ import math
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
-START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
-MAX_CHAPTERS_TO_PROCESS = 1
+START_URL = "https://manhuaus.com/manga/echoes-of-the-reverse-planet/chapter-0/"
+MAX_CHAPTERS_TO_PROCESS = 33
 
 # --- KOKORO TTS SETTINGS ---
 VOICE_MODEL = "am_adam" # Do not change  
