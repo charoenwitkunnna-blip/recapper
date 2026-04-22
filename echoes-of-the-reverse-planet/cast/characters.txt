@@ -13,3 +13,8 @@ Role: An antagonist and guard for the facility who slaughtered Woohyun's escape 
 Appearance: A tall, muscular guard with spiky red hair, a matching beard, and three-lens green tactical goggles.
 Personality: Arrogant, sadistic, and views the test subjects as nothing more than insects to be crushed.
 --------------------
+Name: Project Researchers
+Role: The faceless scientists conducting the inhumane experiments of Project: Transcendence.
+Appearance: Masked individuals wearing white hazmat suits and gas masks, often carrying tablets to record data.
+Personality: Cold, clinical, and completely devoid of empathy for their test subjects.
+--------------------
