@@ -13,15 +13,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Setup Python with automatic pip caching
-      # This will now successfully find requirements.txt and create a cache!
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           cache: 'pip'
 
-      # Cache the heavy Kokoro ONNX models to save download time
       - name: Cache Kokoro Models
         id: cache-kokoro
         uses: actions/cache@v4
@@ -47,21 +44,26 @@ jobs:
         run: |
           python recap.py
 
+      # Changed to catch ALL mp4 files (chapter videos AND full recap)
       - name: Upload Generated Artifacts
         if: always() 
         uses: actions/upload-artifact@v4
         with:
           name: recap-outputs
           path: |
-            videos/*.mp4
+            **/*.mp4
             **/*.txt
 
-      - name: Commit and Push Video & Lore
+      # Added *.mp4 to .gitignore so Git only saves text/lore updates!
+      - name: Commit and Push Lore
         if: always()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
+          
+          echo "*.mp4" >> .gitignore
+          
           git add .
-          git commit -m "Auto-generate Manhwa Recap Video & Update Lore" || echo "No changes to commit"
+          git commit -m "Update Manhwa Lore and Progress" || echo "No changes to commit"
           git pull --rebase origin main || true
           git push
