@@ -1,0 +1,6 @@
+seleniumbase
+requests
+pillow
+numpy
+soundfile
+kokoro-onnx
