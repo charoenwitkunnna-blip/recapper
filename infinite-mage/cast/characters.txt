@@ -1,0 +1,25 @@
+Name: Arian Vincent
+Role: Shirone's foster father and a skilled woodsman.
+Appearance: A muscular man in his 40s with long brown hair, a goatee, and a hunter's build.
+Personality: Gruff and powerful, yet deeply protective and tender-hearted toward his family.
+--------------------
+Name: Arian Shirone
+Role: The protagonist, a commoner boy with an extraordinary mind.
+Appearance: A 12-year-old boy with messy blonde hair, bright blue eyes, and a slight build.
+Personality: Inquisitive, resilient, and possesses an insatiable thirst for knowledge and magic.
+--------------------
+Name: Olina
+Role: Vincent's wife and Shirone's foster mother.
+Appearance: A kind-looking woman with long auburn hair and a gentle expression.
+Personality: Nurturing, supportive, and shares a deep, loving bond with both her husband and son.
+--------------------
+Name: Martin's Grandpa
+Role: A shopkeeper in the city of Creas who mentors Shirone for a day.
+Appearance: An elderly man with a friendly face, white beard, and a straw hat.
+Personality: Kind, patient, and impressed by the intelligence of the younger generation.
+--------------------
+Name: Myrhe Alpheas
+Role: Headmaster of Alpheas Magic Academy and a high-ranking Grade 4 Mage.
+Appearance: An old man with long, flowing white hair and a beard, dressed in regal blue mage robes.
+Personality: Wise, perceptive, and looks beyond social status to find true potential.
+--------------------
