@@ -13,32 +13,39 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Setup Python with automatic pip caching
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: 'pip'
 
-      # System dependencies for video/audio processing
+      # Cache the heavy Kokoro ONNX models to save download time
+      - name: Cache Kokoro Models
+        id: cache-kokoro
+        uses: actions/cache@v4
+        with:
+          path: |
+            kokoro-v1.0.onnx
+            voices-v1.0.bin
+          key: kokoro-models-v1.0
+
       - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ffmpeg espeak-ng
 
-      # Python environment setup
       - name: Install Python Dependencies
         run: |
           pip install seleniumbase requests pillow numpy soundfile kokoro-onnx
           seleniumbase install chromedriver
 
-      # The Dynamic Step: No more hardcoded individual keys
       - name: Run AI Video Recapper
         env:
-          # This passes all your secrets as a single JSON string
           ALL_SECRETS: ${{ toJSON(secrets) }}
         run: |
           python recap.py
 
-      # Save the output files so you can download them from the Actions tab
       - name: Upload Generated Artifacts
         if: always() 
         uses: actions/upload-artifact@v4
@@ -48,19 +55,12 @@ jobs:
             videos/*.mp4
             **/*.txt
 
-      # Sync changes back to your repository
       - name: Commit and Push Video & Lore
         if: always()
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
-          
-          # Add all new videos and text files
           git add .
-          
-          # Commit only if there are changes to avoid errors
           git commit -m "Auto-generate Manhwa Recap Video & Update Lore" || echo "No changes to commit"
-          
-          # Pull latest changes to avoid conflicts, then push
           git pull --rebase origin main || true
           git push
