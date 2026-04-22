@@ -25,7 +25,7 @@ url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS = []
+GEMINI_API_KEYS =[]
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 for key, value in os.environ.items():
@@ -44,13 +44,13 @@ if not GEMINI_API_KEYS:
     print("ERROR: No GEMINI API KEYS provided.")
     exit(1)
 
-# Ensure essential global folders exist to prevent Git errors
+# Ensure essential global folders exist
 os.makedirs("videos", exist_ok=True)
 
-# VERY IMPORTANT: Protect Git repo from bloat if the script crashes midway 
-if not os.path.exists(".gitignore"):
-    with open(".gitignore", "w") as f:
-        f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\n")
+# VERY IMPORTANT: Protect Git repo from the 100MB crash limit!
+# We tell Git to ALWAYS IGNORE the massive final stitched videos folder.
+with open(".gitignore", "w") as f:
+    f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\nvideos/\n")
 
 # Font Setup
 font_path = "Roboto-Black.ttf"
@@ -64,7 +64,7 @@ def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
     
     # 1. Parse URL for naming
-    url_parts = [p for p in chapter_url.split('/') if p]
+    url_parts =[p for p in chapter_url.split('/') if p]
     chapter_str = url_parts[-1] 
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
@@ -204,7 +204,7 @@ def process_chapter(chapter_url):
     # 7. Rendering
     print(f"[{chap_num}] Rendering Synced Clips...")
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
-    ffmpeg_tasks =[]
+    ffmpeg_tasks = []
 
     for i, block in enumerate(script_data['panels']):
         img_idx = block.get('image_index')
@@ -238,20 +238,21 @@ def process_chapter(chapter_url):
         
         if effect == 'pan_down' and aspect_ratio > 1.8:
             crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
-            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
+            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         elif effect == 'pan_up' and aspect_ratio > 1.8:
             crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
             cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         elif effect == 'zoom_out':
             bg.save(f_path)
-            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
         else: 
             bg.save(f_path)
-            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
         
         ffmpeg_tasks.append((cmd, v_out))
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:
+        [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
     # 8. Stitching Chapter
     print(f"[{chap_num}] Stitching Chapter...")

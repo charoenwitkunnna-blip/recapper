@@ -20,7 +20,6 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          # xvfb is for Selenium, ffmpeg for video, espeak-ng is required by Kokoro-TTS
           sudo apt-get install -y xvfb ffmpeg espeak-ng
 
       - name: Install Python Dependencies
@@ -40,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: recap-outputs
-          # Grabs the actual generated videos and all lore/tracking files
+          # This uploads the massive final video to GitHub Actions for you to download safely
           path: |
             videos/*.mp4
             */**/*.txt
@@ -50,10 +49,15 @@ jobs:
         run: |
           git config --global user.name "AI Recapper Bot"
           git config --global user.email "bot@github.com"
-          git pull --rebase origin main || true
           
-          # Add all generated folders (Lore, Chapters, Videos)
+          # 1. Add all changes FIRST so Git doesn't crash
           git add .
           
+          # 2. Commit the small individual chapters and text files
           git commit -m "Auto-generate Manhwa Recap Video & Update Lore" || echo "No changes"
+          
+          # 3. Pull latest changes safely
+          git pull --rebase origin main || true
+          
+          # 4. Push to GitHub
           git push
