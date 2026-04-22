@@ -23,3 +23,8 @@ Role: Headmaster of Alpheas Magic Academy and a high-ranking Grade 4 Mage.
 Appearance: An old man with long, flowing white hair and a beard, dressed in regal blue mage robes.
 Personality: Wise, perceptive, and looks beyond social status to find true potential.
 --------------------
+Name: Shuamin
+Role: A student at the Alpheas Magic Academy who demonstrates the Spirit Zone.
+Appearance: A young girl with purple hair styled in two long braids, wearing the Alpheas Magic Academy uniform.
+Personality: Obedient, focused, and talented in the academy's basic magical arts.
+--------------------
