@@ -11,6 +11,7 @@ import re
 import numpy as np
 import soundfile as sf
 import json
+import concurrent.futures
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
@@ -139,32 +140,22 @@ I have provided you with chronological Manhwa strips. On the left side of EVERY 
 STRICT NARRATION RULES:
 1. NO MARKDOWN: You are strictly forbidden from using Markdown formatting in the narration. Output ONLY plain text. No asterisks, bolding, italics, hash symbols, or bullet points.
 2. BE EXTREMELY DETAILED: Walk through the chapter chronologically. Do not gloss over the middle. Capture every major plot beat, fight sequence, magic spell, inner thought, and lore reveal step-by-step.
-3. YOUTUBE RECAP VOCABULARY: Use high-energy, dynamic, and modern recap language. Inject action-packed verbs and slang like "blitzes", "speedblitzes", "tanks the hit", "flexes his aura", "drops a bombshell", "absolute menace", "absolute unit", or "OP". Tell the story as if you are passionately explaining an awesome manhwa.
-4. BAN ON REPETITIVE NAMING ("OUR MC"): You are STRICTLY FORBIDDEN from using the phrase "our MC" more than ONCE in the entire script. You must constantly rotate how you address the main character. Use their actual name, pronouns, or creative aliases.
-5. ADVANCED TRANSITIONS: Do not start sentences with basic words like "Then", "Suddenly", "After that", or "But". Use fluid, engaging transitions.
-6. PARAPHRASE DIALOGUE & THOUGHTS: Do not use standard dialogue formatting or quote marks. Weave spoken words and inner monologues directly into the narrative.
-7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". Treat the events as happening in a living, breathing world.
-8. DESCRIPTIVE IDENTIFIERS: If a character's name is not explicitly mentioned, give them a memorable title based on their look or vibe.
+3. YOUTUBE RECAP VOCABULARY: Use high-energy, dynamic, and modern recap language. Inject action-packed verbs and slang. Tell the story as if you are passionately explaining an awesome manhwa.
+4. BAN ON REPETITIVE NAMING ("OUR MC"): You are STRICTLY FORBIDDEN from using the phrase "our MC" more than ONCE. Use their actual name, pronouns, or creative aliases.
+5. ADVANCED TRANSITIONS: Do not start sentences with basic words like "Then", "Suddenly", "After that", or "But".
+6. PARAPHRASE DIALOGUE & THOUGHTS: Do not use standard dialogue formatting or quote marks. Weave spoken words directly into the narrative.
+7. NO FOURTH WALL BREAKS: Never use words like "panel", "image", "reader", "drawn", or "comic". 
+8. DESCRIPTIVE IDENTIFIERS: Give unnamed characters a memorable title based on their look or vibe.
 
 YOUR TASKS:
 1. Identify Characters: Document the name (or descriptive title) and physical appearance of any significant character shown.
-2. Select Panels: Choose the most action-packed and story-relevant panels. Skip filler. Look at the ruler to determine exactly where the panel starts and ends (with slight padding).
+2. Select Panels: Choose the most action-packed and story-relevant panels. Look at the ruler to determine exactly where the panel starts and ends.
 3. Script: Write the fast-paced narration for that exact panel following the STRICT NARRATION RULES.
 
-OUTPUT FORMAT:
-You MUST return a pure JSON object containing a "characters" array and a "panels" array. 
+OUTPUT FORMAT (Pure JSON):
 {
-  "characters":[
-    {"name": "Shirone / The Young Mage", "appearance": "Silver hair, wears ragged commoner clothes, determined eyes"}
-  ],
-  "panels":[
-    {
-      "image_index": 0,
-      "start_mark": 12,
-      "end_mark": 46,
-      "narration": "The absolute menace drops from the sky, shattering the ground!"
-    }
-  ]
+  "characters":[{"name": "Shirone", "appearance": "Silver hair"}],
+  "panels":[{"image_index": 0, "start_mark": 12, "end_mark": 46, "narration": "The absolute menace drops..."}]
 }
 """
 
@@ -181,11 +172,9 @@ current_key_idx = 0
 
 for attempt in range(max_retries):
     api_key = GEMINI_API_KEYS[current_key_idx]
-    
-    # Strictly using gemini-flash-latest
     gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
     
-    print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx} ({found_key_names[current_key_idx]})...")
+    print(f"Requesting Gemini API (Attempt {attempt+1}/{max_retries}) using Key Index {current_key_idx}...")
     try:
         gemini_res = requests.post(gemini_url, json=payload, headers={"Content-Type": "application/json"})
         
@@ -201,43 +190,28 @@ for attempt in range(max_retries):
                     print("[-] Failed to parse AI JSON. Retrying...")
                     time.sleep(retry_delay)
                     
-        elif gemini_res.status_code in [429, 503, 400]:
-            print(f"[-] HTTP {gemini_res.status_code}: {gemini_res.text}")
+        elif gemini_res.status_code in[429, 503, 400]:
             current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
-            print(f"-> Switching to API Key {current_key_idx} ({found_key_names[current_key_idx]})...")
             time.sleep(retry_delay)
         else:
-            print(f"[-] HTTP ERROR {gemini_res.status_code}: {gemini_res.text}")
             current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
-            print(f"-> Switching to API Key {current_key_idx} ({found_key_names[current_key_idx]})...")
             time.sleep(retry_delay)
             
     except Exception as e:
-        print(f"[-] Exception during request: {e}")
         current_key_idx = (current_key_idx + 1) % len(GEMINI_API_KEYS)
-        print(f"-> Switching to API Key {current_key_idx} ({found_key_names[current_key_idx]})...")
         time.sleep(retry_delay)
 
 if not script_data or "panels" not in script_data:
-    print("FATAL ERROR: Failed to get valid JSON from Gemini after all retries and key rotations.")
+    print("FATAL ERROR: Failed to get valid JSON from Gemini.")
     exit(1)
 
-# --- EXTRACT & SAVE CHARACTER DATA ---
 characters = script_data.get("characters", [])
 panels = script_data.get("panels",[])
 
-if characters:
-    char_file_path = "characters/chapter_1_characters.txt"
-    with open(char_file_path, "w", encoding="utf-8") as cf:
-        cf.write("=== DETECTED CHARACTERS ===\n\n")
-        for char in characters:
-            cf.write(f"Name/Alias: {char.get('name', 'Unknown')}\n")
-            cf.write(f"Appearance: {char.get('appearance', 'No description provided')}\n")
-            cf.write("-" * 30 + "\n")
-    print(f"[+] Saved {len(characters)} character profiles to {char_file_path}")
-
 print(f"[+] AI Editor precision-mapped {len(panels)} panels!")
-print("[4] Framing Premium Video Scenes & Generating Audio...")
+
+# ----------------- PASS 1: BATCH AUDIO GENERATION & FRAME PREP -----------------
+print("[4] Generating Batch Audio & Preparing Visuals...")
 
 if not os.path.exists("kokoro-v0_19.onnx"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.onnx", "kokoro-v0_19.onnx")
@@ -246,9 +220,10 @@ if not os.path.exists("voices.bin"):
 
 kokoro = Kokoro("kokoro-v0_19.onnx", "voices.bin")
 sample_rate = 24000
-
-concat_lines =[]
 TARGET_W, TARGET_H = 1080, 1920
+
+ffmpeg_tasks = []
+concat_lines =[]
 
 for i, block in enumerate(panels):
     img_idx = block.get("image_index")
@@ -261,20 +236,17 @@ for i, block in enumerate(panels):
     
     try:
         raw_img = Image.open(original_files[img_idx])
-        
         ai_h = ai_heights[img_idx]
         scale_factor = raw_img.height / ai_h 
         
-        # Add a little padding to the crop so it doesn't look cramped
         top_px = int((start_mark * 10) * scale_factor) - 20
         bottom_px = int((end_mark * 10) * scale_factor) + 20
-        
         top_px = max(0, min(top_px, raw_img.height - 10))
         bottom_px = max(top_px + 10, min(bottom_px, raw_img.height))
         
         cropped_panel = raw_img.crop((0, top_px, raw_img.width, bottom_px))
         
-        # Audio generation for this specific scene
+        # Audio generation (Happening all at once before Video processing)
         samples, sr = kokoro.create(narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
         audio_path = f"videos/temp/audio_{i:04d}.wav"
         sf.write(audio_path, samples, sample_rate)
@@ -286,81 +258,78 @@ for i, block in enumerate(panels):
         frame_path = f"videos/temp/panel_{i:04d}.jpg"
         scene_video_path = f"videos/temp/scene_{i:04d}.mp4"
         
-        # --- 1. LONG PANEL: SMOOTH PAN FROM THE VERY TOP DOWN ---
-        # The threshold is higher now (2.2) so it only pans if it's genuinely too tall to fit nicely.
+        # --- 1. LONG PANEL: SMOOTH PAN (60% MAX DISTANCE) ---
         if aspect_ratio > 2.2:
-            print(f"   -> Scene {i:02d} | Extreme Vertical Panel (AR: {aspect_ratio:.1f}) | Effect: Pan Down")
-            
             new_w = TARGET_W
             new_h = max(TARGET_H, int(TARGET_W * aspect_ratio))
             scaled_panel = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
             scaled_panel.save(frame_path, format="JPEG", quality=95)
             
+            # (in_h-1920)*0.6 ensures we only ever scroll 60% of the entire image to keep it steady
             ffmpeg_cmd =[
-                "ffmpeg", "-y", 
-                "-loop", "1", "-t", f"{exact_duration:.4f}",
-                "-i", frame_path, "-i", audio_path,
-                "-map", "0:v", "-map", "1:a",
-                "-vf", f"crop=1080:1920:0:(in_h-1920)*(t/{exact_duration:.4f}),format=yuv420p",
-                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "24000", 
-                "-pix_fmt", "yuv420p", "-r", "30", "-shortest",
-                scene_video_path
+                "ffmpeg", "-y", "-loop", "1", "-t", f"{exact_duration:.4f}",
+                "-i", frame_path, "-i", audio_path, "-map", "0:v", "-map", "1:a",
+                "-vf", f"crop=1080:1920:0:((in_h-1920)*0.6)*(t/{exact_duration:.4f}),format=yuv420p",
+                "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-b:a", "192k", 
+                "-ar", "24000", "-pix_fmt", "yuv420p", "-r", "30", "-shortest", scene_video_path
             ]
             
-        # --- 2. NORMAL PANEL: BLUR BACKGROUND + SLOW ZOOM IN ---
+        # --- 2. NORMAL PANEL: JITTER-FREE SMOOTH ZOOM (60% MAX) ---
         else:
-            print(f"   -> Scene {i:02d} | Fit Size Panel (AR: {aspect_ratio:.1f}) | Effect: Zoom In")
-            
-            # Create a premium blurred background
             bg = cropped_panel.resize((TARGET_W, TARGET_H), Image.Resampling.LANCZOS)
             bg = bg.filter(ImageFilter.GaussianBlur(35)) 
-            
-            # Scale the panel to perfectly fit the screen bounds
             scale = min(TARGET_W / cropped_panel.width, TARGET_H / cropped_panel.height)
             new_w, new_h = int(cropped_panel.width * scale), int(cropped_panel.height * scale)
             panel_scaled = cropped_panel.resize((new_w, new_h), Image.Resampling.LANCZOS)
-            
             x_offset = (TARGET_W - new_w) // 2
             y_offset = (TARGET_H - new_h) // 2
             bg.paste(panel_scaled, (x_offset, y_offset))
             bg.save(frame_path, format="JPEG", quality=95)
             
-            # Flawless Zoompan implementation (No single quotes causing subprocess crashes)
+            # Calculate dynamic zoom speed (Max 60% increase = 1.6 scale)
+            # Capped at 0.002 per frame so short clips don't zoom nauseatingly fast
+            zoom_inc = min(0.002, 0.6 / frames) 
+            
+            # Upscales to 2160x3840 inside FFmpeg before zoom to completely eliminate fractional pixel "shaking"
             ffmpeg_cmd =[
-                "ffmpeg", "-y", 
-                "-i", frame_path, "-i", audio_path,
-                "-map", "0:v", "-map", "1:a",
-                "-vf", f"zoompan=z=zoom+0.0015:d={frames}:x=iw/2-(iw/zoom)/2:y=ih/2-(ih/zoom)/2:s=1080x1920:fps=30,format=yuv420p",
-                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "24000", 
-                "-pix_fmt", "yuv420p", "-shortest",
-                scene_video_path
+                "ffmpeg", "-y", "-i", frame_path, "-i", audio_path, "-map", "0:v", "-map", "1:a",
+                "-vf", f"scale=2160x3840,zoompan=z='min(1.6, zoom+{zoom_inc:.6f})':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,format=yuv420p",
+                "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-b:a", "192k", 
+                "-ar", "24000", "-pix_fmt", "yuv420p", "-shortest", scene_video_path
             ]
             
-        # Render the scene
-        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+        # Fallback command if an effect fails
+        fallback_cmd =[
+            "ffmpeg", "-y", "-loop", "1", "-t", f"{exact_duration:.4f}", "-i", frame_path, "-i", audio_path,
+            "-map", "0:v", "-map", "1:a", "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+            "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-b:a", "192k", "-ar", "24000", "-pix_fmt", "yuv420p", "-shortest", scene_video_path
+        ]
         
-        # FALLBACK LOGIC: If a zoom/pan effect randomly fails, we catch it and force a static render
-        # so the entire final video doesn't break due to a missed clip!
-        if result.returncode != 0:
-            print(f"      [!] FFmpeg Effect Error! Falling back to static frame for Scene {i:02d}...")
-            fallback_cmd =[
-                "ffmpeg", "-y", "-loop", "1", "-t", f"{exact_duration:.4f}",
-                "-i", frame_path, "-i", audio_path,
-                "-map", "0:v", "-map", "1:a",
-                "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
-                "-c:v", "libx264", "-c:a", "aac", "-b:a", "192k", "-ar", "24000",
-                "-pix_fmt", "yuv420p", "-shortest",
-                scene_video_path
-            ]
-            subprocess.run(fallback_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            
-        # If successfully generated, add it to the final stitching list
-        if os.path.exists(scene_video_path):
-            abs_scene_path = os.path.abspath(scene_video_path).replace('\\', '/')
-            concat_lines.append(f"file '{abs_scene_path}'")
-            
+        ffmpeg_tasks.append((i, ffmpeg_cmd, fallback_cmd, scene_video_path))
+        
     except Exception as e:
-        print(f"Skipped Scene {i} due to Python Error: {e}")
+        print(f"Skipped Scene {i} due to Error: {e}")
+
+# ----------------- PASS 2: PARALLEL VIDEO RENDERING -----------------
+print(f"[5] Concurrently Rendering {len(ffmpeg_tasks)} Dynamic Scenes (SPEED BOOST!)...")
+
+def process_scene(task):
+    idx, cmd, fallback, out_path = task
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        subprocess.run(fallback, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return out_path
+
+# Execute FFmpeg renders across multiple CPU threads
+max_workers = max(1, os.cpu_count() - 1)
+with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+    results = list(executor.map(process_scene, ffmpeg_tasks))
+
+# Build Concat List
+for path in results:
+    if os.path.exists(path):
+        abs_scene_path = os.path.abspath(path).replace('\\', '/')
+        concat_lines.append(f"file '{abs_scene_path}'")
 
 if not concat_lines:
     print("Error: No valid scenes generated.")
@@ -370,13 +339,14 @@ concat_file_path = "videos/temp/vid_list.txt"
 with open(concat_file_path, "w") as f:
     f.write("\n".join(concat_lines) + "\n")
 
-print("[5] Stitching the Final Edited Masterpiece...")
+print("[6] Stitching the Final Edited Masterpiece...")
 final_video_path = "videos/final_recap.mp4"
 
-ffmpeg_cmd =[
+# Lossless concat demuxing
+ffmpeg_stitch_cmd =[
     "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", concat_file_path, 
     "-c", "copy", final_video_path
 ]
 
-subprocess.run(ffmpeg_cmd)
-print(f"[+] Success! Cinematic Synced Video with Dynamic Camera Movements generated at {final_video_path}")
+subprocess.run(ffmpeg_stitch_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+print(f"[+] Success! Blazing-Fast Cinematic Video generated at {final_video_path}")
