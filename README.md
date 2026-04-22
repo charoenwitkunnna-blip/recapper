@@ -1,6 +1,1 @@
-<div align="center">
-  <video width="100%" controls>
-    <source src="videos/final_recap.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-</div>
+[![Watch Preview](https://raw.githubusercontent.com/charoenwitkunnna-blip/recapper/main/thumbnail.png)](https://charoenwitkunnna-blip.github.io/recapper/videos/final_recap.mp4)
