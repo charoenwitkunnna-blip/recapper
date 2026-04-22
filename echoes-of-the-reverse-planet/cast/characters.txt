@@ -13,3 +13,8 @@ Role: Minor Antagonist
 Appearance: Muscular man with spiky red hair, a matching beard, and high-tech green goggles.
 Personality: Sadistic and arrogant, he takes pleasure in slaughtering the escaping test subjects.
 --------------------
+Name: The Scientists
+Role: Background Antagonists responsible for the experiments.
+Appearance: Men wearing white hazmat suits and black gas masks with circular eye filters.
+Personality: Inhumane, clinical, and completely devoid of empathy.
+--------------------
