@@ -107,8 +107,11 @@ for idx, path, h, t, i in results:
 # --- AI SCRIPTING ---
 print(f"[3] Generating AI Script...")
 prompt = (
-    "Act as a professional Manhwa recap scriptwriter. Follow strict NO MARKDOWN, highly detailed, high-energy, no-repetitive-naming rules. "
-    "Return JSON with 'characters' and 'panels'. Each item in 'panels' must have: "
+    "Act as a professional Manhwa recap scriptwriter. Follow strict high-energy, no-repetitive-naming rules.\n\n"
+    "CRITICAL SYSTEM INSTRUCTION: You are communicating with an automated Python parser. "
+    "DO NOT output ANY markdown formatting whatsoever. DO NOT wrap your response in ```json ``` blocks. "
+    "Returning anything other than raw, unformatted JSON will cause a catastrophic system crash and server data loss. "
+    "Return pure JSON with 'characters' and 'panels'. Each item in 'panels' must have: "
     "image_index (int), start_mark (int), end_mark (int), narration (string), and effect (string). "
     "For 'effect', you MUST choose exactly one of these: 'zoom_in', 'zoom_out', 'pan_down', 'pan_up'. Choose the cinematic effect that best fits the action."
 )
@@ -119,15 +122,26 @@ current_key = 0
 for _ in range(15):
     res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
     if res.status_code == 200:
-        script_data = json.loads(res.json()['candidates'][0]['content']['parts'][0]['text'])
-        break
+        try:
+            raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
+            # Bulletproof extraction: Find the first { and last } to ignore all hallucinatory text
+            start_idx = raw_text.find('{')
+            end_idx = raw_text.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1:
+                clean_json = raw_text[start_idx:end_idx+1]
+                script_data = json.loads(clean_json)
+                break 
+        except Exception as e:
+            print("    -> AI returned malformed JSON, retrying...")
+            
     current_key = (current_key + 1) % len(GEMINI_API_KEYS)
 
 if not script_data:
-    print("Error: AI Script generation failed.")
+    print("Error: AI Script generation failed after multiple attempts.")
     exit(1)
 
-# --- MODEL DOWNLOAD (FIXED v1.0 URLS) ---
+# --- MODEL DOWNLOAD ---
 print(f"[4] Verifying TTS Models (v1.0)...")
 if not os.path.exists("kokoro-v1.0.onnx"):
     print("    -> Downloading Kokoro v1.0 ONNX...")
@@ -200,7 +214,7 @@ for i, block in enumerate(script_data['panels']):
             "-c:v", "libx264", "-preset", "superfast", "-c:a", "aac", "-shortest", v_out
         ]
         
-    else: # Zoom in
+    else: # Default Zoom In
         bg.save(f_path)
         zoom_expr = f"1.00+(0.25/{frames})*on"
         cmd =[
@@ -211,7 +225,8 @@ for i, block in enumerate(script_data['panels']):
     
     ffmpeg_tasks.append((cmd, v_out))
 
-with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as ex:
+    [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
 with open("videos/temp/vid_list.txt", "w") as f:
     f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
