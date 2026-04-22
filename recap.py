@@ -43,6 +43,12 @@ if not GEMINI_API_KEYS:
 # Ensure essential global folders exist to prevent Git errors
 os.makedirs("videos", exist_ok=True)
 
+# VERY IMPORTANT: Protect Git repo from bloat if the script crashes midway 
+# before cleaning up temp folders or downloading large AI models.
+if not os.path.exists(".gitignore"):
+    with open(".gitignore", "w") as f:
+        f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\n")
+
 # Font Setup
 font_path = "Roboto-Black.ttf"
 if not os.path.exists(font_path):
@@ -55,7 +61,7 @@ def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
     
     # 1. Parse URL for naming
-    url_parts = [p for p in chapter_url.split('/') if p]
+    url_parts =[p for p in chapter_url.split('/') if p]
     manga_name = url_parts[-2] 
     chapter_str = url_parts[-1] 
     chap_num_match = re.search(r'\d+', chapter_str)
@@ -69,7 +75,7 @@ def process_chapter(chapter_url):
     video_out_dir = os.path.join(base_dir, "video")
     temp_dir = os.path.join(base_dir, "temp")
 
-    for d in [cast_dir, chapters_dir, current_chap_dir, video_out_dir, temp_dir]:
+    for d in[cast_dir, chapters_dir, current_chap_dir, video_out_dir, temp_dir]:
         os.makedirs(d, exist_ok=True)
 
     char_file = os.path.join(cast_dir, "characters.txt")
@@ -83,7 +89,7 @@ def process_chapter(chapter_url):
 
     # 4. Scrape Chapter and Next Link (Speed fix included)
     print(f"[{chap_num}] Scraping Images & Next Link...")
-    image_urls, site_cookies, next_url = [], {}, None
+    image_urls, site_cookies, next_url =[], {}, None
     with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
         sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
         try: sb.uc_gui_click_captcha()
@@ -109,7 +115,7 @@ def process_chapter(chapter_url):
 
     # 5. Process Strips
     print(f"[{chap_num}] Processing {len(image_urls)} Strips...")
-    parts, original_files, ai_heights = [], {}, {}
+    parts, original_files, ai_heights =[], {}, {}
 
     def process_image(idx, img_url):
         try:
@@ -134,7 +140,7 @@ def process_chapter(chapter_url):
         except: return None
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        results = [r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
+        results =[r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
     results.sort(key=lambda x: x[0])
 
     for idx, path, h, t, i in results:
@@ -176,7 +182,7 @@ def process_chapter(chapter_url):
     # 7. Rendering (Lossless Sync Fix)
     print(f"[{chap_num}] Rendering Synced Clips...")
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
-    ffmpeg_tasks = []
+    ffmpeg_tasks =[]
 
     for i, block in enumerate(script_data['panels']):
         img_idx = block.get('image_index')
@@ -207,20 +213,20 @@ def process_chapter(chapter_url):
         effect = block.get('effect', 'zoom_in').lower()
 
         # Build FFmpeg command with apad to prevent drift
-        common_flags = ["-c:v", "libx264", "-preset", "superfast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
+        common_flags =["-c:v", "libx264", "-preset", "superfast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
         if effect == 'pan_down' and aspect_ratio > 1.8:
             crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
-            cmd = ["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         elif effect == 'pan_up' and aspect_ratio > 1.8:
             crop.resize((1080, int(1080 * aspect_ratio))).save(f_path)
-            cmd = ["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         elif effect == 'zoom_out':
             bg.save(f_path)
-            cmd = ["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         else: 
             bg.save(f_path)
-            cmd = ["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+            cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
         ffmpeg_tasks.append((cmd, v_out))
 
