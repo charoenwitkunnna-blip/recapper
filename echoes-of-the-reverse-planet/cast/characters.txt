@@ -1,0 +1,15 @@
+Name: Woohyun
+Role: The protagonist and Test Subject No. 62 of Project: Transcendence.
+Appearance: A young man with messy black hair. Initially seen in a white patient gown with a lean frame, later develops a heavily muscular build and wears dark tactical clothing.
+Personality: Resilient, deeply traumatized, and driven by an obsessive need for revenge against those who experimented on him.
+--------------------
+Name: Soo-ah
+Role: A fellow test subject and close friend of Woohyun who died during the experiments.
+Appearance: A girl with long pink hair and amber eyes, wearing a white patient gown and metal restraints.
+Personality: Gentle and selfless, she spent her final moments worrying about Woohyun rather than herself.
+--------------------
+Name: Baek
+Role: An antagonist and guard for the facility who slaughtered Woohyun's escape party.
+Appearance: A tall, muscular guard with spiky red hair, a matching beard, and three-lens green tactical goggles.
+Personality: Arrogant, sadistic, and views the test subjects as nothing more than insects to be crushed.
+--------------------
