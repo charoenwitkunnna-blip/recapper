@@ -20,6 +20,11 @@ from kokoro_onnx import Kokoro
 START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
 MAX_CHAPTERS_TO_PROCESS = 30
 
+# --- KOKORO TTS SETTINGS ---
+# Default voices: af_heart, af_bella, af_nicole, am_adam, am_michael
+VOICE_MODEL = "af_heart"  
+AUDIO_SPEED = 1.0         
+
 # Extract Manga Name globally so it can be used for final stitching
 url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
