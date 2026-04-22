@@ -19,7 +19,7 @@ from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
 START_URL = "https://manhuaus.com/manga/echoes-of-the-reverse-planet/chapter-0/"
-MAX_CHAPTERS_TO_PROCESS = "all" 
+MAX_CHAPTERS_TO_PROCESS = 1
 
 # --- VIDEO RESOLUTION SETTINGS ---
 VIDEO_FORMAT = "Landscape" 
