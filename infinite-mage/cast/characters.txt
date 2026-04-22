@@ -53,3 +53,123 @@ Role: The combat teacher for the Ogent family children.
 Appearance: A tall, intimidating man with a bald head, a long grey ponytail, and a thick beard. He has a very muscular build.
 Personality: Terrifyingly strict and loud. He possesses enough authority to discipline the young masters of the house through extreme physical labor.
 --------------------
+Name: Bischoff Ogent
+Role: Head of the House of Ogent and father to Rian and Rai.
+Appearance: A sophisticated man with dark hair, a goatee, and a cold, sharp gaze, typically seen in professional noble attire.
+Personality: Strict and success-oriented, he values talent and legacy above all else.
+--------------------
+Name: Rai Ogent
+Role: The second son of the House of Ogent and Rian’s older brother.
+Appearance: A young man with long, dark hair and a cold, focused expression. He possesses a lean but powerful build.
+Personality: A recognized genius in swordsmanship, he is the standard by which Rian is constantly judged.
+--------------------
+Name: Reina Ogent
+Role: Rian and Rai's older sister; a Court Pianist.
+Appearance: A young woman with long, flowing lavender-blue hair and sharp, intelligent amber eyes. She wears an elegant, ruffled cream-colored court dress.
+Personality: Possesses a professional and graceful aura while performing, but according to Rian, she has the 'worst personality' in the mansion.
+--------------------
+Name: Head Butler Louis
+Role: The Head Butler of the Ogent household.
+Appearance: A middle-aged man with short brown hair, wearing spectacles and a formal butler uniform comprising a dark suit, white shirt, and bow tie.
+Personality: Serious, rule-bound, and fiercely loyal to the family head. He is observant and reports any breach of house protocol immediately.
+--------------------
+Name: Ogent Elder
+Role: Former Head of the House of Ogent; Rian's Grandfather.
+Appearance: A very muscular, boisterous older man with short spiky blue hair and orange-gold eyes. He is seen laughing loudly while wearing a simple white shirt.
+Personality: Hearty, jovial, and deeply impressed by displays of youthful passion and conviction.
+--------------------
+Name: Klump Ogent
+Role: The Previous Family Head of the House of Ogent.
+Appearance: A massive, muscular elderly man with spiky blue hair and orange-gold eyes. He wears a simple white dress shirt that strains against his physique.
+Personality: Boisterous, jovial, and sharp-witted. He values the 'fire' of youth and the purity of conviction over rigid noble protocols.
+--------------------
+Name: Adolph I
+Role: The founder of the Kingdom of Thormia.
+Appearance: Depicted in a historical silhouette as a king with a crown and a long dark cape.
+Personality: A powerful and strategic unifier who established the tradition of the Knight's Oath.
+--------------------
+Name: Magic Theory Student
+Role: A student in the Intermediate Class focusing on sound amplification magic.
+Appearance: A young girl with pink hair and glasses, wearing the black and red Alpheas Magic Academy uniform.
+Personality: Intelligent and resilient, she is deeply immersed in her magical research regardless of minor setbacks.
+--------------------
+Name: Camie
+Role: A magic candidate participating in the entrance examination.
+Appearance: A young boy with short reddish-brown hair, wearing a cream-colored school uniform.
+Personality: Innocent and polite, though his magical potential is noted as impressive for his age.
+--------------------
+Name: Instructor Maron
+Role: A proctor for the Alpheas Magic Academy entrance exam.
+Appearance: A handsome young man with short blonde hair and sharp features, wearing a brown coat and white cravat.
+Personality: Skeptical and analytical, he values traditional backgrounds and is wary of late bloomers.
+--------------------
+Name: Instructor Seria
+Role: A proctor and researcher at the academy.
+Appearance: A woman with purple hair tied in a ponytail and wearing glasses and a dark mage robe.
+Personality: Observant and quick to recognize anomalies in magical performance.
+--------------------
+Name: Amy's Friend
+Role: Amy’s classmate and gossip partner.
+Appearance: A girl with long orange hair and big eyes, wearing the Alpheas Academy uniform.
+Personality: Cheerful, energetic, and easily infatuated with handsome boys.
+--------------------
+Name: Sina Olifer
+Role: Certified Rank 6 Instructor at Alpheas Magic Academy.
+Appearance: A young woman with long, vibrant purple hair tied in a ponytail and glasses. She wears a professional dark mage robe.
+Personality: Perceptive, protective of talent, and willing to challenge her peers to ensure a student's growth.
+--------------------
+Name: Thadd
+Role: Certified Rank 6 Instructor at Alpheas Magic Academy.
+Appearance: A handsome young man with short blonde hair, wearing a brown noble-style coat and a white cravat.
+Personality: Traditionalist, skeptical, and somewhat arrogant. He believes in rigid progression and suspects late bloomers of cheating.
+--------------------
+Name: Ethella Romie
+Role: Certified Rank 6 Spirit Zone Specialist Teacher.
+Appearance: A woman with long, braided orange hair and glasses, wearing a long brown dress and a dark cloak.
+Personality: Cheerful, welcoming, and encouraging toward her students.
+--------------------
+Name: Sharelle
+Role: Amy's close friend and a student at the academy.
+Appearance: A young girl with vibrant orange hair tied into two high pigtails and large, expressive eyes. She wears the standard Alpheas Magic Academy uniform.
+Personality: Cheerful, excitable, and a massive fan of gossip and romantic drama. She is easily swayed by public opinion.
+--------------------
+Name: Jake Ardius
+Role: A high-ranking student at the academy and a member of a family specializing in finance.
+Appearance: A young man with wavy dark purple hair, pale skin, and sharp features. He wears the Alpheas Magic Academy uniform with a Class IV badge.
+Personality: Arrogant, manipulative, and elitist. He uses his family's status to intimidate others and hides his malicious intent behind a facade of noble grace.
+--------------------
+Name: Cerielle
+Role: A senior student at the academy and a close friend/confidant of Amy.
+Appearance: A young woman with long orange hair and purple eyes. She wears the Alpheas Magic Academy uniform with a Class IV badge.
+Personality: Kind-hearted and prone to panic, but deeply loyal. She is easily flustered by gossip and romantic misunderstandings.
+--------------------
+Name: Black Magician Messenger
+Role: A subordinate of Jake Ardius and a member of the 'Black Magician' bully circle.
+Appearance: A young man with short blonde hair and a smug, punchable face. He wears a Class V academy uniform.
+Personality: Arrogant, disrespectful to seniors, and enjoys delivering threats on behalf of his boss.
+--------------------
+Name: Black Magician Lackeys
+Role: Members of Jake Ardius's bully circle.
+Appearance: Various male students wearing the Alpheas Magic Academy uniform with Class V badges. They often have smug or mocking expressions.
+Personality: Cowardly, elitist, and reliant on numerical superiority to intimidate others.
+--------------------
+Name: Maria
+Role: A student in Class Seven and classmate of Shirone.
+Appearance: A student with dark hair tied into a low ponytail, wearing the standard Alpheas Magic Academy uniform.
+Personality: Timid, observant, and seemingly burdened by a secret or a sense of justice.
+--------------------
+Name: Torkolin
+Role: A renowned physiologist and scholar mentioned in the book 'The Grand Scholars' Talk'.
+Appearance: A middle-aged man with short grey hair, a thin beard, and a confident smile, wearing a dark formal suit and tie.
+Personality: Insightful, observant, and possesses a unique, somewhat eccentric perspective on human physical limits, especially regarding the youth.
+--------------------
+Name: Slider Mark
+Role: A student in Class Seven and the son of Sir Slider, a skill advisor for the Magic Association.
+Appearance: A young boy of 15 with short, spiky dark brown hair and sharp brown eyes. He wears a formal school vest and tie over a white shirt.
+Personality: Arrogant, smug, and reliant on his high-status connections and elite tutors to stay ahead of his peers.
+--------------------
+Name: Erlang Maria
+Role: A student in Class Seven who has been held back for six years.
+Appearance: A young girl with long lavender-purple hair styled in a braid, wearing the Alpheas Magic Academy uniform.
+Personality: Quiet and sensitive. She despises competition and bullying, which has fueled a secret resolve to stop those who torment others.
+--------------------
