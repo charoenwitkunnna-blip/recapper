@@ -19,7 +19,6 @@ from kokoro_onnx import Kokoro
 # ================= CONFIGURATION =================
 START_URL = 'https://manhuaus.com/manga/echoes-of-the-reverse-planet/chapter-0/'
 MAX_CHAPTERS_TO_PROCESS = 1
-
 # --- DYNAMIC API KEY EXTRACTION ---
 GEMINI_API_KEYS = []
 temp_keys =[]
@@ -57,9 +56,10 @@ AUDIO_SPEED = 1.0
 # Ensure essential global folders exist to prevent Git errors
 os.makedirs("videos", exist_ok=True)
 
+# Add videos/ to ignore so git doesn't track the massive full recap
 if not os.path.exists(".gitignore"):
     with open(".gitignore", "w") as f:
-        f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\n")
+        f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\nvideos/\n")
 
 # Font Setup
 font_path = "Roboto-Black.ttf"
@@ -104,14 +104,10 @@ def process_chapter(chapter_url):
 
     char_file = os.path.join(cast_dir, "characters.txt")
     highest_file = os.path.join(chapters_dir, "highest.txt")
-    
-    # Video Output Paths
-    final_name = f"{manga_name}_ch{chap_num}.mp4"
     final_path = os.path.join(current_chap_dir, "video.mp4")
-    global_video_path = os.path.join("videos", final_name)
 
     # ================= RESUME CHECK =================
-    if os.path.exists(final_path) or os.path.exists(global_video_path):
+    if os.path.exists(final_path):
         print(f"[{chap_num}] Video already exists! Skipping AI & Rendering to continue recap...")
         next_url = None
         with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
@@ -358,9 +354,6 @@ def process_chapter(chapter_url):
         f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
     
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", final_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
-    # Push a copy of the finalized video to the global 'videos/' folder for easy viewing/resuming
-    shutil.copy(final_path, global_video_path)
     
     with open(highest_file, "w") as f: f.write(str(chap_num))
     shutil.rmtree(temp_dir, ignore_errors=True)
