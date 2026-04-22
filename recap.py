@@ -28,22 +28,30 @@ MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 GEMINI_API_KEYS =[]
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
-for key, value in os.environ.items():
-    match = pattern.fullmatch(key)
-    if match and value.strip() and "YOUR_API_KEY" not in value:
-        temp_keys.append((int(match.group(1)), key, value.strip()))
 
+# 1. Try to load from GitHub Actions JSON blob (ALL_SECRETS)
+all_secrets_raw = os.environ.get("ALL_SECRETS")
+if all_secrets_raw:
+    try:
+        secrets_dict = json.loads(all_secrets_raw)
+        for key, value in secrets_dict.items():
+            match = pattern.fullmatch(key)
+            if match and value.strip() and "YOUR_API_KEY" not in value:
+                temp_keys.append((int(match.group(1)), value.strip()))
+    except json.JSONDecodeError:
+        print("Warning: ALL_SECRETS was found but could not be parsed as JSON.")
+
+# 2. Fallback for Local Development (Standard Environment Variables)
+if not temp_keys:
+    for key, value in os.environ.items():
+        match = pattern.fullmatch(key)
+        if match and value.strip() and "YOUR_API_KEY" not in value:
+            temp_keys.append((int(match.group(1)), value.strip()))
+
+# Sort keys to maintain strict rotation order (1, 2, 3...)
 temp_keys.sort(key=lambda x: x[0])
-for _, _, key_value in temp_keys:
+for _, key_value in temp_keys:
     GEMINI_API_KEYS.append(key_value)
-
-VOICE_MODEL = "am_adam"
-AUDIO_SPEED = 1.25
-
-if not GEMINI_API_KEYS:
-    print("ERROR: No GEMINI API KEYS provided.")
-    exit(1)
-
 # Ensure essential global folders exist
 os.makedirs("videos", exist_ok=True)
 
