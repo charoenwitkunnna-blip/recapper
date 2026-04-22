@@ -18,17 +18,24 @@ from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
 START_URL = "https://manhuaus.com/manga/echoes-of-the-reverse-planet/chapter-0/"
-MAX_CHAPTERS_TO_PROCESS = 33
+MAX_CHAPTERS_TO_PROCESS = "all" 
+
+# --- VIDEO RESOLUTION SETTINGS ---
+# "Landscape" = 1920x1080 (Standard YouTube)
+# "Portrait" = 1080x1920 (TikTok / YouTube Shorts)
+VIDEO_FORMAT = "Landscape" 
+W = 1920 if VIDEO_FORMAT.lower() == "landscape" else 1080
+H = 1080 if VIDEO_FORMAT.lower() == "landscape" else 1920
 
 # --- KOKORO TTS SETTINGS ---
-VOICE_MODEL = "am_adam" # Do not change  
+VOICE_MODEL = "am_adam"  
 AUDIO_SPEED = 1.0         
 
-url_parts =[p for p in START_URL.split('/') if p]
+url_parts = [p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS = []
+GEMINI_API_KEYS =[]
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -41,7 +48,7 @@ if all_secrets_raw:
             if match and value.strip() and "YOUR_API_KEY" not in value:
                 temp_keys.append((int(match.group(1)), value.strip()))
     except json.JSONDecodeError:
-        print("Warning: ALL_SECRETS was found but could not be parsed as JSON.")
+        pass
 
 if not temp_keys:
     for key, value in os.environ.items():
@@ -66,7 +73,6 @@ font = ImageFont.truetype(font_path, 28)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
 # ================= GLOBAL MODEL INITIALIZATION =================
-# Download and initialize globally to prevent reloading on every chapter loop
 if not os.path.exists("kokoro-v1.0.onnx"):
     print("Downloading Kokoro ONNX model...")
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx", "kokoro-v1.0.onnx")
@@ -79,7 +85,6 @@ kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
 
 # ================= PARALLEL PANEL PROCESSOR =================
 def build_and_render_clip(i, block, temp_dir, original_files, ai_heights):
-    """Handles Image processing, Audio generation, and FFmpeg encoding for a single panel."""
     img_idx = block.get('image_index')
     if img_idx not in original_files: 
         return None
@@ -90,8 +95,11 @@ def build_and_render_clip(i, block, temp_dir, original_files, ai_heights):
     bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
     crop = raw.crop((0, top_px, raw.width, bottom_px))
     
-    # Generate Audio directly in thread
-    samples, _ = kokoro.create(block['narration'], voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+    narration_text = str(block.get('narration', '')).replace('\n', ' ').replace('\r', ' ').strip()
+    if not narration_text:
+        narration_text = "..."
+        
+    samples, _ = kokoro.create(narration_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
     audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
     sf.write(audio_path, samples, 24000)
     
@@ -102,33 +110,68 @@ def build_and_render_clip(i, block, temp_dir, original_files, ai_heights):
     f_path = os.path.join(temp_dir, f"p_{i:04d}.jpg")
     v_out = os.path.join(temp_dir, f"v_{i:04d}.mov") 
     
+    effect = block.get('effect', 'zoom_in').lower()
     aspect_ratio = crop.height / crop.width
     
-    # HUGE SPEEDUP: Scale down -> Blur -> Scale up (much faster than blurring 1080p directly)
-    bg = crop.resize((270, 480)).filter(ImageFilter.GaussianBlur(10)).resize((1080, 1920))
-    s_w = int(crop.width * min(1080/crop.width, 1920/crop.height))
-    s_h = int(crop.height * min(1080/crop.width, 1920/crop.height))
-    bg.paste(crop.resize((s_w, s_h)), ((1080-s_w)//2, (1920-s_h)//2))
-
-    effect = block.get('effect', 'zoom_in').lower()
-
-    # HUGE SPEEDUP: preset ultrafast and restricting threads per task
     common_flags =["-c:v", "libx264", "-preset", "ultrafast", "-threads", "2", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
     
-    if effect == 'pan_down' and aspect_ratio > 1.8:
-        crop.resize((1080, int(1080 * aspect_ratio))).save(f_path, quality=85)
-        cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:min(in_h-1920\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
-    elif effect == 'pan_up' and aspect_ratio > 1.8:
-        crop.resize((1080, int(1080 * aspect_ratio))).save(f_path, quality=85)
-        cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", f"crop=1080:1920:0:max(0\\,(in_h-1920)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-    elif effect == 'zoom_out':
+    handled_as_pan = False
+
+    # ---------------- DYNAMIC PAN CAMERA LOGIC ----------------
+    if effect in['pan_down', 'pan_up'] and aspect_ratio > (H/W)*1.2:
+        # Scale the panel to 75% width on Landscape so the glass effect remains highly visible
+        target_w = int(W * 0.75) if W > H else W
+        scale_factor = target_w / crop.width
+        target_h = int(crop.height * scale_factor)
+        
+        # Safety constraint so massive panels don't crash FFmpeg (cap at 10x screen height)
+        max_h = H * 10
+        if target_h > max_h:
+            target_h = max_h
+            target_w = int(crop.width * (target_h / crop.height))
+            
+        if target_h > H:
+            handled_as_pan = True
+            
+            # Generate a massive tall canvas with the glass effect applied
+            bg_w, bg_h = max(1, target_w//15), max(1, target_h//15) 
+            tall_bg = crop.resize((bg_w, bg_h)).filter(ImageFilter.GaussianBlur(15)).resize((W, target_h))
+            
+            # Paste the clean strip directly into the center of the tall canvas
+            scaled_crop = crop.resize((target_w, target_h))
+            tall_bg.paste(scaled_crop, ((W-target_w)//2, 0))
+            tall_bg.save(f_path, quality=85)
+            
+            # Slide a WxH camera window perfectly from top-to-bottom over the tall canvas
+            speed = (target_h - H) / video_dur
+            if effect == 'pan_down':
+                vf = f"crop={W}:{H}:0:min(in_h-{H}\\,{speed}*t),fps=30,setsar=1,format=yuv420p"
+            else:
+                vf = f"crop={W}:{H}:0:max(0\\,(in_h-{H})-{speed}*t),fps=30,setsar=1,format=yuv420p"
+                
+            cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, "-vf", vf] + common_flags + [v_out]
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            
+    # ---------------- STANDARD ZOOM LOGIC ----------------
+    if not handled_as_pan:
+        # Generate the standard WxH resolution glass background
+        bg_w_blur, bg_h_blur = max(1, W//15), max(1, H//15)
+        bg = crop.resize((bg_w_blur, bg_h_blur)).filter(ImageFilter.GaussianBlur(15)).resize((W, H))
+        
+        s_w = int(crop.width * min(W/crop.width, H/crop.height))
+        s_h = int(crop.height * min(W/crop.width, H/crop.height))
+        bg.paste(crop.resize((s_w, s_h)), ((W-s_w)//2, (H-s_h)//2))
         bg.save(f_path, quality=85)
-        cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
-    else: 
-        bg.save(f_path, quality=85)
-        cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", f"scale=2160x3840,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1080x1920:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-    
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
+        scale_w, scale_h = W*2, H*2
+        if effect == 'zoom_out':
+            vf = f"scale={scale_w}x{scale_h},zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={W}x{H}:fps=30,setsar=1,format=yuv420p"
+        else: 
+            vf = f"scale={scale_w}x{scale_h},zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s={W}x{H}:fps=30,setsar=1,format=yuv420p"
+        
+        cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, "-vf", vf] + common_flags +[v_out]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        
     return v_out
 
 # ================= MAIN CHAPTER LOGIC =================
@@ -234,13 +277,55 @@ def process_chapter(chapter_url):
 
     print(f"[{chap_num}] AI Writing Script...")
     prompt = (
-        "Act as a professional Manhwa recap scriptwriter. Return pure JSON format ONLY.\n"
-        f"EXISTING CHARACTER LORE:\n{existing_chars_text if existing_chars_text else 'None.'}\n\n"
-        "Return JSON with 'new_characters' (list of name, appearance, role, personality) and 'panels'.\n"
-        "Each 'panels' item: image_index, start_mark, end_mark, narration, effect (zoom_in, zoom_out, pan_down, pan_up)."
+        "Act as a professional Manhwa recap scriptwriter. Read the images and narrate the events sequentially.\n"
+        f"EXISTING CHARACTER LORE:\n{existing_chars_text if existing_chars_text else 'None.'}\n"
     )
     
-    payload = {"contents":[{"parts":[{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json"}}
+    response_schema = {
+        "type": "OBJECT",
+        "properties": {
+            "new_characters": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "name": {"type": "STRING"},
+                        "appearance": {"type": "STRING"},
+                        "role": {"type": "STRING"},
+                        "personality": {"type": "STRING"}
+                    },
+                    "required":["name", "appearance", "role", "personality"]
+                }
+            },
+            "panels": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "image_index": {"type": "INTEGER"},
+                        "start_mark": {"type": "NUMBER"},
+                        "end_mark": {"type": "NUMBER"},
+                        "narration": {"type": "STRING"},
+                        "effect": {
+                            "type": "STRING",
+                            "enum":["zoom_in", "zoom_out", "pan_down", "pan_up"]
+                        }
+                    },
+                    "required":["image_index", "start_mark", "end_mark", "narration", "effect"]
+                }
+            }
+        },
+        "required": ["panels"]
+    }
+
+    payload = {
+        "contents": [{"parts":[{"text": prompt}] + parts}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": response_schema
+        }
+    }
+    
     script_data, current_key = None, 0
     
     for _ in range(15):
@@ -265,12 +350,8 @@ def process_chapter(chapter_url):
     print(f"[{chap_num}] Rendering Synced Clips in Parallel (Audio + Image + Video)...")
     ffmpeg_tasks =[]
     
-    # We submit the tasks in a threadpool so Audio, Image Crop, and FFmpeg command happen concurrently
     with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:
-        # Preserve original chronological order
         futures =[ex.submit(build_and_render_clip, i, block, temp_dir, original_files, ai_heights) for i, block in enumerate(script_data['panels'])]
-        
-        # Collect outputs sequentially to maintain storyline order
         for f in futures:
             res = f.result()
             if res:
@@ -287,7 +368,6 @@ def process_chapter(chapter_url):
     shutil.rmtree(temp_dir, ignore_errors=True)
     
     return next_url, False
-
 
 def stitch_all_chapters():
     print(f"\n{'='*50}\n[FINALIZING] Stitching Full Series Recap\n{'='*50}")
@@ -330,13 +410,20 @@ def stitch_all_chapters():
 current_target = START_URL
 processed = 0
 
-while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
+while current_target:
+    if str(MAX_CHAPTERS_TO_PROCESS).lower() != "all":
+        try:
+            if processed >= int(MAX_CHAPTERS_TO_PROCESS):
+                break
+        except ValueError:
+            pass 
+
     try:
         current_target, skipped = process_chapter(current_target)
         if not skipped:
             processed += 1
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error executing chapter: {e}")
         break
 
 stitch_all_chapters()
