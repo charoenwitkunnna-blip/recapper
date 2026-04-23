@@ -17,12 +17,22 @@ import math
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
-START_URL = "https://manhuaus.com/manga/infinite-mage/chapter-1/"
+# Pull from environment variables passed by GitHub Actions
+START_URL = os.environ.get("START_URL", "https://manhuaus.com/manga/infinite-mage/chapter-1/").strip()
 VOICE_MODEL = "am_adam"  
 AUDIO_SPEED = 1.0    
-MAX_CHAPTERS_TO_PROCESS = 1
 
-url_parts =[p for p in START_URL.split('/') if p]
+# Handle "all" or specific number of chapters
+max_chap_env = os.environ.get("MAX_CHAPTERS", "1").strip().lower()
+if max_chap_env == "all":
+    MAX_CHAPTERS_TO_PROCESS = float('inf')
+else:
+    try:
+        MAX_CHAPTERS_TO_PROCESS = int(max_chap_env)
+    except ValueError:
+        MAX_CHAPTERS_TO_PROCESS = 1 # Fallback if someone types gibberish
+
+url_parts = [p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
@@ -75,7 +85,7 @@ def process_chapter(chapter_url):
     current_chap_dir = os.path.join(chapters_dir, chap_num)
     temp_dir = os.path.join(base_dir, "temp")
 
-    for d in[cast_dir, chapters_dir, current_chap_dir, temp_dir]:
+    for d in [cast_dir, chapters_dir, current_chap_dir, temp_dir]:
         os.makedirs(d, exist_ok=True)
 
     char_file = os.path.join(cast_dir, "characters.txt")
@@ -152,7 +162,6 @@ def process_chapter(chapter_url):
 
     print(f"[{chap_num}] AI Writing Script...")
     
-    # ================= IMPROVED PROMPT INTEGRATION =================
     prompt = (
         "Act as a professional Manhwa recap scriptwriter. Follow strict high-energy rules for YouTube/TikTok.\n\n"
         "CRITICAL INSTRUCTION: DO NOT output markdown blocks (like ```json). Return pure JSON format ONLY.\n\n"
@@ -171,7 +180,6 @@ def process_chapter(chapter_url):
         "Each item in 'new_characters' must have: 'name', 'appearance', 'role', 'personality'.\n"
         "Each item in 'panels' must have: image_index (int), start_mark (number), end_mark (number), narration (string), effect ('zoom_in', 'zoom_out', 'pan_down', 'pan_up')."
     )
-    # ===============================================================
 
     schema = {
         "type": "OBJECT",
@@ -226,21 +234,17 @@ def process_chapter(chapter_url):
         effect = block.get('effect', 'zoom_in').lower()
         common_flags =["-c:v", "libx264", "-preset", "ultrafast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
-        # New 16:9 Landscape Dimensions
         target_w = 1080 
         target_h = int(target_w * aspect_ratio)
 
-        # OLD LOGIC FIXED SPEED & ZOOM APPLIED TO 16:9 (1920x1080)
         if target_h > 2500:
             if effect not in['pan_up', 'pan_down']: effect = 'pan_down'
             
-            # 1920-wide canvas with the Manhwa centered
             bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
             fg = crop.resize((target_w, target_h), Image.Resampling.LANCZOS)
             bg.paste(fg, ((1920 - target_w) // 2, 0)) 
             bg.save(f_path)
             
-            # Fixed Speed 100 pixels per second (Smooth Panning)
             if effect == 'pan_up':
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
                        "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
@@ -248,14 +252,12 @@ def process_chapter(chapter_url):
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
                        "-vf", f"crop=1920:1080:0:min(in_h-1080\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         else:
-            # Short image -> 16:9 blurred background + zoompan logic
             bg = crop.resize((1920, 1080)).filter(ImageFilter.GaussianBlur(40))
             scale_f = min(1920 / crop.width, 1080 / crop.height)
             s_w, s_h = int(crop.width * scale_f), int(crop.height * scale_f)
             bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920 - s_w) // 2, (1080 - s_h) // 2))
             bg.save(f_path)
 
-            # Standardized 25% smooth zoom scaling to 4K first to prevent pixelation
             if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
                        "-vf", f"scale=3840x2160,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]

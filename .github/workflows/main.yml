@@ -2,6 +2,17 @@ name: AI Manhwa Recapper
 
 on:
   workflow_dispatch:
+    inputs:
+      manga_url:
+        description: 'Target Manhwa Chapter URL to start at'
+        required: true
+        default: 'https://manhuaus.com/manga/infinite-mage/chapter-1/'
+        type: string
+      max_chapters:
+        description: 'Number of chapters to process (Type "all" for unlimited)'
+        required: true
+        default: '1'
+        type: string
 
 permissions:
   contents: write
@@ -30,11 +41,12 @@ jobs:
           pip install seleniumbase requests pillow numpy soundfile kokoro-onnx
           seleniumbase install chromedriver
 
-      # The Dynamic Step: No more hardcoded individual keys
+      # Pass UI Inputs as Env Variables for the Python Script
       - name: Run AI Video Recapper
         env:
-          # This passes all your secrets as a single JSON string
           ALL_SECRETS: ${{ toJSON(secrets) }}
+          START_URL: ${{ inputs.manga_url }}
+          MAX_CHAPTERS: ${{ inputs.max_chapters }}
         run: |
           python recap.py
 
