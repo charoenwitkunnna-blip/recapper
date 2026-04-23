@@ -1,0 +1,30 @@
+Name: Jin Seowoon
+Role: Main Protagonist
+Appearance: Messy black hair and blue eyes wearing a blue track jacket
+Personality: Talented gamer who feels guilty about his lifestyle
+--------------------
+Name: Heavenly Demon
+Role: Main Antagonist of the Murim novel
+Appearance: Old man with long white hair and beard with glowing red eyes
+Personality: Ruthless and arrogant
+--------------------
+Name: Kang Wooncheon
+Role: Hero of the Murim novel
+Appearance: Scared man with black hair and yellow eyes wearing dark robes
+Personality: Driven by revenge for his destroyed clan
+--------------------
+Name: Kairon
+Role: High-level player and Archmage
+Appearance: Blonde elf with long hair and pointed ears wearing white and gold archmage robes
+Personality: Arrogant and determined to defeat his rivals
+--------------------
+Name: Escro
+Role: Player acting as the Demon King
+Appearance: Undead looking man with a skeletal face and a tattered brown hood
+Personality: Power hungry and mocking
+--------------------
+Name: The Aggressive Warrior
+Role: Hostile player
+Appearance: Muscular man with a buzz cut wearing leather armor and carrying a massive broadsword
+Personality: Violent and prone to bullying weaker looking players
+--------------------
