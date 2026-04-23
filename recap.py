@@ -409,11 +409,11 @@ def create_shorts_teaser():
     max_hook_length = 59.0 - cta_dur 
 
     # Advanced FFmpeg filter:
-    # 1. setpts=0.666667*PTS (Makes Video 1.5x faster)
+    # 1. setpts=0.666667*PTS (Makes Video 1.25x faster)
     # 2. scale & blur (Formats for 9:16 layout safely)
-    # 3. atempo=1.5 (Makes Audio 1.5x faster without destroying pitch)
+    # 3. atempo=1.25 (Makes Audio 1.25x faster without destroying pitch)
     vf_string = "[0:v]setpts=0.666667*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.666667*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
-    af_string = "[0:a]atempo=1.5[aout]"
+    af_string = "[0:a]atempo=1.25[aout]"
     
     subprocess.run([
         "ffmpeg", "-y", "-i", first_chap_video,
