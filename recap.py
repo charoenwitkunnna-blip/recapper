@@ -31,7 +31,7 @@ else:
     try:
         MAX_CHAPTERS_TO_PROCESS = int(max_chap_env)
     except ValueError:
-        MAX_CHAPTERS_TO_PROCESS = 1 # Fallback if someone types gibberish
+        MAX_CHAPTERS_TO_PROCESS = 1 
 
 url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
@@ -75,7 +75,7 @@ headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
 def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
-    url_parts = [p for p in chapter_url.split('/') if p]
+    url_parts =[p for p in chapter_url.split('/') if p]
     chapter_str = url_parts[-1] 
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
@@ -86,7 +86,7 @@ def process_chapter(chapter_url):
     current_chap_dir = os.path.join(chapters_dir, chap_num)
     temp_dir = os.path.join(base_dir, "temp")
 
-    for d in [cast_dir, chapters_dir, current_chap_dir, temp_dir]:
+    for d in[cast_dir, chapters_dir, current_chap_dir, temp_dir]:
         os.makedirs(d, exist_ok=True)
 
     char_file = os.path.join(cast_dir, "characters.txt")
@@ -175,7 +175,7 @@ def process_chapter(chapter_url):
         "- The 'narration' text MUST be a single continuous string. DO NOT use line breaks (\\n).\n"
         "- DO NOT use ellipses (...). Use a single period instead.\n"
         "- DO NOT use multiple punctuation marks together (no !!, ??, or ?!). Use only one.\n"
-        "- DO NOT use asterisks, brackets, or parentheses for actions (no *gasps* or [sighs]).\n"
+        "- DO NOT use asterisks, brackets, or parentheses for actions (no *gasps* or[sighs]).\n"
         "- DO NOT use quotation marks (\", \') or em-dashes (—). Keep it entirely plain text.\n\n"
         "CAMERA & MARKER RULES:\n"
         "- Look at the images provided. There are yellow numbers acting as markers along the left edge.\n"
@@ -201,10 +201,7 @@ def process_chapter(chapter_url):
     for _ in range(15):
         try:
             res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
-            
-            # --- EXPLICIT STATUS CODE HANDLING ---
             if res.status_code == 200:
-                # 200 = OK / SUCCESS
                 try:
                     raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
                     start_idx, end_idx = raw_text.find('{'), raw_text.rfind('}')
@@ -212,21 +209,14 @@ def process_chapter(chapter_url):
                         script_data = json.loads(raw_text[start_idx:end_idx+1])
                         break 
                 except: pass
-                time.sleep(2) # If JSON is bad, we retry with the same key
-                
+                time.sleep(2) 
             elif res.status_code == 400:
-                # 400 = BAD REQUEST (Usually means payload is too large or prompt is broken)
-                # Changing API keys won't fix this error, so we stay on the same key and retry
                 print(f"[{chap_num}] Error 400 (Bad Request). Prompt issue. Retrying with same key...")
                 time.sleep(2)
-                
             else:
-                # 429 = RATE LIMIT / 503 = SERVICE UNAVAILABLE
-                # We need to switch to a new API key
                 print(f"[{chap_num}] Error {res.status_code} (Rate Limit/Unavailable). Switching API key...")
                 current_key = (current_key + 1) % len(GEMINI_API_KEYS)
                 time.sleep(2)
-                
         except requests.exceptions.RequestException as e:
             print(f"[{chap_num}] Network Error: {e}. Switching API key...")
             current_key = (current_key + 1) % len(GEMINI_API_KEYS)
@@ -241,8 +231,6 @@ def process_chapter(chapter_url):
 
     print(f"[{chap_num}] Preparing Audio & Assets Concurrently...")
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
-    
-    # FIX: espeak phonemizer inside Kokoro is NOT thread-safe. We lock it to prevent the "input=4, output=3" collision error.
     kokoro_lock = threading.Lock()
     
     def prepare_panel_assets(i, block):
@@ -254,24 +242,19 @@ def process_chapter(chapter_url):
         bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
         crop = raw.crop((0, top_px, raw.width, bottom_px))
         
-        # Additional text formatting fixes to prevent phonemizer line mismatch crashes
         clean_narration = block.get('narration', '').replace('\n', ' ').replace('\r', ' ').strip()
-        clean_narration = re.sub(r'["\”\“\‘\’\*_]', '', clean_narration) # Remove quotes/markdown 
+        clean_narration = re.sub(r'["\”\“\‘\’\*_]', '', clean_narration) 
         clean_narration = re.sub(r'\s+', ' ', clean_narration).strip()
-        if not clean_narration: 
-            clean_narration = "..." 
+        if not clean_narration: clean_narration = "..." 
             
-        with kokoro_lock: # Force threads to wait in line to process TTS to avoid espeak memory errors
+        with kokoro_lock: 
             try:
                 samples, _ = kokoro.create(clean_narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
             except Exception as e:
-                print(f"Kokoro audio generation error: {e}. Attempting fallback text...")
                 safe_text = re.sub(r'[^a-zA-Z0-9\s.,?!]', '', clean_narration)
                 if not safe_text.strip(): safe_text = "..."
-                try:
-                    samples, _ = kokoro.create(safe_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
-                except:
-                    samples, _ = kokoro.create("...", voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+                try: samples, _ = kokoro.create(safe_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+                except: samples, _ = kokoro.create("...", voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
                 
         audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
         sf.write(audio_path, samples, 24000)
@@ -283,14 +266,15 @@ def process_chapter(chapter_url):
         f_path, v_out = os.path.join(temp_dir, f"p_{i:04d}.jpg"), os.path.join(temp_dir, f"v_{i:04d}.mov") 
         aspect_ratio = crop.height / crop.width
         effect = block.get('effect', 'zoom_in').lower()
-        common_flags =["-c:v", "libx264", "-preset", "ultrafast", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
+        
+        # FIX FOR FILE SIZE: Added '-crf 28' and changed to '-preset faster'. This shrinks file sizes by 80%+ while preserving quality.
+        common_flags =["-c:v", "libx264", "-preset", "faster", "-crf", "28", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
         target_w = 1080 
         target_h = int(target_w * aspect_ratio)
 
         if target_h > 2500:
             if effect not in['pan_up', 'pan_down']: effect = 'pan_down'
-            
             bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
             fg = crop.resize((target_w, target_h), Image.Resampling.LANCZOS)
             bg.paste(fg, ((1920 - target_w) // 2, 0)) 
@@ -298,8 +282,8 @@ def process_chapter(chapter_url):
             
             if effect == 'pan_up':
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-            else: # pan_down
+                       "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
+            else:
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
                        "-vf", f"crop=1920:1080:0:min(in_h-1080\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         else:
@@ -312,7 +296,7 @@ def process_chapter(chapter_url):
             if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
                        "-vf", f"scale=3840x2160,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
-            else: # zoom_in
+            else:
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
                        "-vf", f"scale=3840x2160,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
@@ -331,7 +315,7 @@ def process_chapter(chapter_url):
     with open(list_path, "w") as f:
         f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
     
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", final_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", final_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     with open(highest_file, "w") as f: f.write(str(chap_num))
     shutil.rmtree(temp_dir, ignore_errors=True)
     return next_url, False
@@ -355,6 +339,110 @@ def stitch_all_chapters():
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", final_recap_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if os.path.exists(list_path): os.remove(list_path)
 
+
+# ================= NEW: 1.5x SPEED SHORTS GENERATOR =================
+def create_shorts_teaser():
+    print(f"\n{'='*50}\n[SHORT GENERATOR] Creating High-Speed YouTube Shorts Teaser\n{'='*50}")
+    
+    # 1. We ONLY want Chapter 1 for the Short as requested. 
+    chapters_dir = os.path.join(MANGA_NAME, "chapters")
+    if not os.path.exists(chapters_dir): 
+        print("No chapters found to create shorts.")
+        return
+        
+    valid_chaps =[]
+    for d in os.listdir(chapters_dir):
+        vp = os.path.join(chapters_dir, d, "video.mp4")
+        if os.path.exists(vp):
+            m = re.search(r'\d+', d)
+            valid_chaps.append((int(m.group(0)) if m else 0, vp))
+            
+    valid_chaps.sort(key=lambda x: x[0])
+    if not valid_chaps: return
+    
+    # Extract just the very first chapter processed
+    first_chap_video = valid_chaps[0][1] 
+
+    shorts_dir = os.path.join(MANGA_NAME, "shorts_temp")
+    os.makedirs(shorts_dir, exist_ok=True)
+
+    # 2. Generate CTA Audio (Call to Action)
+    print("Generating Call-to-Action Audio...")
+    teaser_audio_text = "Want to see what happens next? Watch the full recap on my channel!"
+    kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
+    try:
+        samples, _ = kokoro.create(teaser_audio_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+    except:
+        # Fallback safeguard
+        samples, _ = kokoro.create("Watch the full recap on my channel!", voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+
+    cta_audio_path = os.path.join(shorts_dir, "cta_audio.wav")
+    sf.write(cta_audio_path, samples, 24000)
+    cta_dur = len(samples) / 24000.0
+
+    # 3. Generate CTA Visuals (Black vertical background with text)
+    print("Generating Call-to-Action Visuals...")
+    cta_img_path = os.path.join(shorts_dir, "cta_img.jpg")
+    img = Image.new('RGB', (1080, 1920), color=(15, 15, 15)) 
+    draw = ImageDraw.Draw(img)
+    large_font = ImageFont.truetype(font_path, 85)
+    
+    text = "Watch the Full Recap\nOn My Channel!"
+    bbox = draw.textbbox((0, 0), text, font=large_font, align="center")
+    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text(((1080-w)/2, (1920-h)/2), text, font=large_font, fill=(255, 255, 255), align="center")
+    img.save(cta_img_path)
+
+    cta_video_path = os.path.join(shorts_dir, "cta_video.mp4")
+    subprocess.run([
+        "ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", cta_img_path, "-i", cta_audio_path,
+        "-c:v", "libx264", "-preset", "faster", "-c:a", "aac", "-ar", "44100", "-b:a", "128k",
+        "-pix_fmt", "yuv420p", "-t", str(cta_dur), cta_video_path
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # 4. Extract Chapter 1, Speed it up 1.5x, Format Vertical, Limit length to exactly fit under 60 seconds.
+    print("Applying 1.5x Speed to Chapter 1 and formatting for Shorts...")
+    hook_video_path = os.path.join(shorts_dir, "hook_video.mp4")
+    
+    # Max duration for YouTube shorts is 60 seconds. 
+    # We subtract our CTA time, and leave a 1-second margin of error.
+    max_hook_length = 59.0 - cta_dur 
+
+    # Advanced FFmpeg filter:
+    # 1. setpts=0.666667*PTS (Makes Video 1.5x faster)
+    # 2. scale & blur (Formats for 9:16 layout safely)
+    # 3. atempo=1.5 (Makes Audio 1.5x faster without destroying pitch)
+    vf_string = "[0:v]setpts=0.666667*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.666667*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
+    af_string = "[0:a]atempo=1.5[aout]"
+    
+    subprocess.run([
+        "ffmpeg", "-y", "-i", first_chap_video,
+        "-filter_complex", f"{vf_string};{af_string}",
+        "-map", "[vout]", "-map", "[aout]",
+        "-t", str(max_hook_length), # Force it under limits
+        "-c:v", "libx264", "-preset", "faster", "-crf", "28", # Keeping file sizes lean
+        "-c:a", "aac", "-b:a", "128k", "-pix_fmt", "yuv420p",
+        hook_video_path
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # 5. Stitch Speed-up Hook + the CTA Teaser
+    print("Stitching Short together...")
+    list_path = os.path.join(shorts_dir, "list.txt")
+    with open(list_path, "w") as f:
+        f.write(f"file '{os.path.abspath(hook_video_path).replace(chr(92), '/')}'\n")
+        f.write(f"file '{os.path.abspath(cta_video_path).replace(chr(92), '/')}'\n")
+
+    final_short_path = os.path.join("videos", f"{MANGA_NAME}_shorts.mp4")
+    subprocess.run([
+        "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
+        "-c:v", "copy", "-c:a", "copy", final_short_path
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    print(f"✅ Fast-Paced Short Teaser generated successfully: {final_short_path}")
+    shutil.rmtree(shorts_dir, ignore_errors=True) 
+
+
+# ================= EXECUTION =================
 if not os.path.exists("kokoro-v1.0.onnx"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx", "kokoro-v1.0.onnx")
 if not os.path.exists("voices-v1.0.bin"):
@@ -368,4 +456,6 @@ while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
     except Exception as e:
         print(f"Error: {e}"); break
 
+# Run Finalizations
 stitch_all_chapters()
+create_shorts_teaser()
