@@ -14,6 +14,7 @@ import json
 import concurrent.futures
 import shutil
 import math
+import threading
 from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
@@ -32,7 +33,7 @@ else:
     except ValueError:
         MAX_CHAPTERS_TO_PROCESS = 1 # Fallback if someone types gibberish
 
-url_parts = [p for p in START_URL.split('/') if p]
+url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
@@ -194,19 +195,42 @@ def process_chapter(chapter_url):
             "panels": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {"image_index": {"type": "INTEGER"}, "start_mark": {"type": "NUMBER"}, "end_mark": {"type": "NUMBER"}, "narration": {"type": "STRING"}, "effect": {"type": "STRING", "enum":["zoom_in", "zoom_out", "pan_down", "pan_up"]}}, "required":["image_index", "start_mark", "end_mark", "narration", "effect"]}}
         }, "required":["new_characters", "panels"]
     }
-    payload = {"contents": [{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
+    payload = {"contents":[{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
+    
     script_data, current_key = None, 0
     for _ in range(15):
-        res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
-        if res.status_code == 200:
-            try:
-                raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
-                start_idx, end_idx = raw_text.find('{'), raw_text.rfind('}')
-                if start_idx != -1 and end_idx != -1:
-                    script_data = json.loads(raw_text[start_idx:end_idx+1])
-                    break 
-            except: pass
-        current_key = (current_key + 1) % len(GEMINI_API_KEYS)
+        try:
+            res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
+            
+            # --- EXPLICIT STATUS CODE HANDLING ---
+            if res.status_code == 200:
+                # 200 = OK / SUCCESS
+                try:
+                    raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
+                    start_idx, end_idx = raw_text.find('{'), raw_text.rfind('}')
+                    if start_idx != -1 and end_idx != -1:
+                        script_data = json.loads(raw_text[start_idx:end_idx+1])
+                        break 
+                except: pass
+                time.sleep(2) # If JSON is bad, we retry with the same key
+                
+            elif res.status_code == 400:
+                # 400 = BAD REQUEST (Usually means payload is too large or prompt is broken)
+                # Changing API keys won't fix this error, so we stay on the same key and retry
+                print(f"[{chap_num}] Error 400 (Bad Request). Prompt issue. Retrying with same key...")
+                time.sleep(2)
+                
+            else:
+                # 429 = RATE LIMIT / 503 = SERVICE UNAVAILABLE
+                # We need to switch to a new API key
+                print(f"[{chap_num}] Error {res.status_code} (Rate Limit/Unavailable). Switching API key...")
+                current_key = (current_key + 1) % len(GEMINI_API_KEYS)
+                time.sleep(2)
+                
+        except requests.exceptions.RequestException as e:
+            print(f"[{chap_num}] Network Error: {e}. Switching API key...")
+            current_key = (current_key + 1) % len(GEMINI_API_KEYS)
+            time.sleep(2)
 
     if not script_data: return next_url, False
 
@@ -218,6 +242,9 @@ def process_chapter(chapter_url):
     print(f"[{chap_num}] Preparing Audio & Assets Concurrently...")
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
     
+    # FIX: espeak phonemizer inside Kokoro is NOT thread-safe. We lock it to prevent the "input=4, output=3" collision error.
+    kokoro_lock = threading.Lock()
+    
     def prepare_panel_assets(i, block):
         img_idx = block.get('image_index')
         if img_idx not in original_files: return None
@@ -227,12 +254,25 @@ def process_chapter(chapter_url):
         bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
         crop = raw.crop((0, top_px, raw.width, bottom_px))
         
-        # FIX: Replace newlines with spaces to prevent phonemizer line mismatch crashes
+        # Additional text formatting fixes to prevent phonemizer line mismatch crashes
         clean_narration = block.get('narration', '').replace('\n', ' ').replace('\r', ' ').strip()
+        clean_narration = re.sub(r'["\”\“\‘\’\*_]', '', clean_narration) # Remove quotes/markdown 
+        clean_narration = re.sub(r'\s+', ' ', clean_narration).strip()
         if not clean_narration: 
-            clean_narration = "..." # Fallback for completely empty text
+            clean_narration = "..." 
             
-        samples, _ = kokoro.create(clean_narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+        with kokoro_lock: # Force threads to wait in line to process TTS to avoid espeak memory errors
+            try:
+                samples, _ = kokoro.create(clean_narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+            except Exception as e:
+                print(f"Kokoro audio generation error: {e}. Attempting fallback text...")
+                safe_text = re.sub(r'[^a-zA-Z0-9\s.,?!]', '', clean_narration)
+                if not safe_text.strip(): safe_text = "..."
+                try:
+                    samples, _ = kokoro.create(safe_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+                except:
+                    samples, _ = kokoro.create("...", voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+                
         audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
         sf.write(audio_path, samples, 24000)
         
@@ -285,8 +325,7 @@ def process_chapter(chapter_url):
             if res: ffmpeg_tasks.append(res)
 
     print(f"[{chap_num}] Rendering Synced Clips...")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:
-        [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
