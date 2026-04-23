@@ -221,7 +221,12 @@ def process_chapter(chapter_url):
         bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
         crop = raw.crop((0, top_px, raw.width, bottom_px))
         
-        samples, _ = kokoro.create(block['narration'], voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+        # FIX: Replace newlines with spaces to prevent phonemizer line mismatch crashes
+        clean_narration = block.get('narration', '').replace('\n', ' ').replace('\r', ' ').strip()
+        if not clean_narration: 
+            clean_narration = "..." # Fallback for completely empty text
+            
+        samples, _ = kokoro.create(clean_narration, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
         audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
         sf.write(audio_path, samples, 24000)
         
