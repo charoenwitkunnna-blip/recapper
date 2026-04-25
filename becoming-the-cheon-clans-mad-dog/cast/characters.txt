@@ -1,0 +1,80 @@
+Name: Mu-myeong
+Role: The protagonist and loyal escort warrior who regresses into his masters body.
+Appearance: Long dark hair, initially in rags as a child, then a handsome warrior with a lean build and cold eyes.
+Personality: Extremely disciplined, stoic, and fiercely loyal until his betrayal.
+--------------------
+Name: Cheon Wicang
+Role: The former Patriarch of the Cheon Clan who gave Mu-myeong his purpose.
+Appearance: An elderly man with a long beard wearing regal brown and red patriarch robes.
+Personality: Authoritative, traditional, and far-sighted.
+--------------------
+Name: Cheon Muryang
+Role: The dissolute eldest young master of the Cheon Clan and the original owner of the body.
+Appearance: Initially a chubby child in red robes, later an obese man with a messy beard and greedy expression.
+Personality: Cowardly, lazy, and treacherous.
+--------------------
+Name: Wol-yeong
+Role: The personal maid of the eldest young master.
+Appearance: A young woman with long dark hair tied back, wearing a simple yellow and red maid outfit.
+Personality: Timid, fearful, and long-suffering due to years of abuse.
+--------------------
+Name: Neung Ryowoon
+Role: An arrogant disciple and bully who frequently mocks Muryang and bets on his failures.
+Appearance: A young man with long brown hair tied back and a permanent smug expression, wearing the blue robes of a Cheon Clan disciple.
+Personality: Cruel, opportunistic, and disrespectful toward those he considers beneath him.
+--------------------
+Name: Cheon Seon-hak
+Role: General Commander of the Heavenly Dragon and Heavenly Phoenix Sword Units and Muryangs uncle.
+Appearance: A middle-aged man with a thick grey beard and hair, wearing red and black commander robes with a large dark cape.
+Personality: Stern, suspicious, and highly critical of Muryang, believing him to be beyond redemption.
+--------------------
+Name: Lee Seok-gi
+Role: The head disciple of the Cheon Clan and a secret traitor.
+Appearance: A man with a sharp face and a black headband who wears blue disciple robes.
+Personality: Smug, arrogant, and deceptive.
+--------------------
+Name: Cha Myeong-hak
+Role: Mu-myeongs first official duel opponent who holds a deep grudge from a past encounter.
+Appearance: A young man with long dark hair tied up and a prominent diagonal scar across his left eye and cheek wearing blue disciple robes.
+Personality: Resentful, vengeful, and determined to prove his strength against the reformed young master.
+--------------------
+Name: Hwa hong
+Role: A servant of the Cheon Clan and a close friend of Wol yeong.
+Appearance: A young woman with her hair tied in two buns wearing a pink and white maid outfit.
+Personality: Loyal, emotional, and prone to panic when her friends are in danger.
+--------------------
+Name: Tang So so
+Role: The powerful and high status fiancee of Cheon Muryang.
+Appearance: A beautiful woman with cold blue eyes wearing elaborate silver head ornaments and traditional tribal patterned robes.
+Personality: Arrogant, cruel, and cold hearted towards those she considers inferior.
+--------------------
+Name: Tang Clan Warrior
+Role: A powerful first-rate martial artist and protector of Tang So-hye.
+Appearance: A tall man with a thick black beard and a blue and red headband wearing green and grey warrior robes.
+Personality: Arrogant, lethal, and strictly follows the laws of his clan.
+--------------------
+Name: Cheon Clan Spy
+Role: A snitch and informant working secretly for Neung Ryowoon.
+Appearance: A young disciple with a simple top knot wearing the blue robes of the Cheon Clan.
+Personality: Sneaky, cowardly, and opportunistic.
+--------------------
+Name: Traitor Trainees
+Role: Henchmen sent to poison Mu-myeong and ruin his reputation before the banquet.
+Appearance: A group of men wearing blue Cheon Clan disciple robes with one having a rough beard and a messy topknot.
+Personality: Sneaky, arrogant, and overconfident in their deceptive plan.
+--------------------
+Name: Cheon Clan Head Trainee
+Role: An opportunistic disciple and minor antagonist.
+Appearance: A man with sharp features and a smug smile wearing a black cap and the blue robes of the Cheon Clan.
+Personality: Greedy, ambitious, and willing to switch sides for personal gain.
+--------------------
+Name: Elder Tang
+Role: A high ranking representative of the Tang Clan.
+Appearance: An older man with a thick greyish-purple beard and hair wearing a yellow turban and green and blue robes.
+Personality: Hot-tempered, proud, and quick to use force to defend his clan's honor.
+--------------------
+Name: Duel Referee
+Role: The official responsible for starting and monitoring the martial arts duel.
+Appearance: A middle-aged man with a thin mustache wearing grey and black robes with a simple top knot.
+Personality: Strict, loud, and impartial.
+--------------------
