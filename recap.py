@@ -218,7 +218,7 @@ def process_chapter(chapter_url):
     script_data, current_key = None, 0
     for _ in range(15):
         try:
-            res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
+            res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-previewt:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
             if res.status_code == 200:
                 try:
                     raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
