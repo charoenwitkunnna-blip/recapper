@@ -1,0 +1,185 @@
+Name: Berje Deias
+Role: The protagonist and a former top-ranked Demon King who regresses to his past.
+Appearance: A young man with sharp black hair and dark military-style clothing with red and gold accents. In his demon form, he possesses large curved horns and glowing eyes.
+Personality: Determined, cynical, and vengeful after realizing he was being manipulated by established rules.
+--------------------
+Name: The Sword God
+Role: The hero who defeats Berje in the original timeline.
+Appearance: A cocky hero with messy grey hair, a red cape, and light armor, wielding a massive jagged sword.
+Personality: Arrogant, mocking, and strategic, viewing the struggle against demons as a mere hunting game.
+--------------------
+Name: Academy Director
+Role: The head of the Demon King Military Academy during Berje's graduation.
+Appearance: An elderly demon with long white hair, a goatee, and ornate red and black robes.
+Personality: Formal and traditional, strictly adhering to the ancient Demon King Standards.
+--------------------
+Name: Archduke Arkaine Blarimph
+Role: A high-ranking official in the Demon Realm who sentences Berje to Arein.
+Appearance: A tall demon with grey skin, glowing red eyes, and a thick mane of black hair. He wears a formal black and red noble suit with a red cross emblem.
+Personality: Strict, traditional, and easily enraged by those who insult the Demon King standards.
+--------------------
+Name: Gordon Dyrik
+Role: The top graduate of the Demon Academy and Berje's loyal lieutenant.
+Appearance: A demon with long black hair, pointed ears, and sharp glasses. He wears a dark military academy uniform and often carries suitcases.
+Personality: Fanatical, high-strung, and obsessed with the rules and regulations of the Demon Realm.
+--------------------
+Name: The 13th Princess
+Role: The target of Berje's first kidnapping mission in the Kingdom of Hilderan.
+Appearance: A young human girl with long blonde hair and light purple eyes, wearing a white frilly nightgown.
+Personality: Quiet and unassuming with a very low presence compared to other royals.
+--------------------
+Name: Draxen
+Role: The Demon King of Beasts who has ruled the Tower of Beast for seventy years.
+Appearance: A massive white wolf demon with glowing red eyes, sharp fangs, and a crown-like metal cage attached to his head. He possesses a hulking, muscular beast-like frame.
+Personality: Arrogant, traditional, and aggressive, though he quickly becomes submissive when faced with overwhelming power.
+--------------------
+Name: Ernan Hilderan
+Role: The First Princess of the Hilderan Kingdom and a legendary spiritist with power over all four elements.
+Appearance: A beautiful young woman with long blonde hair and light purple eyes, initially seen in a white nightgown. She is surrounded by elemental spirits like slimes and clouds.
+Personality: Cheerful, highly intelligent, and deceptively powerful, capable of manipulating even a Demon Kings territory.
+--------------------
+Name: The King of Hilderan
+Role: the ruler of the Hilderan Kingdom and father to Ernan.
+Appearance: An elderly human king with messy grey hair, a thick beard, and a golden crown. His eyes glow with a terrifying red light of pure rage.
+Personality: Extremely protective, vengeful, and authoritative, willing to mobilize his entire military for his daughter.
+--------------------
+Name: Hillan Kargil
+Role: The Hero of the Hilderan Kingdom.
+Appearance: A young man with light brown hair wearing shiny silver armor and a blue cape.
+Personality: Valiant, dutiful, and devoted to justice.
+--------------------
+Name: Mercenary Captain
+Role: The leader of the Scarlet Hawk Mercenary Guild.
+Appearance: A rugged man with greyish brown hair, a goatee, and a gold tooth wearing brown leather armor with fur trim.
+Personality: Greedy, loud-mouthed, and easily intimidated by superior strength.
+--------------------
+Name: Granada
+Role: A high-ranking member of the Maple Tribe who becomes Berje's subordinate and spy.
+Appearance: An elf with long messy green hair and a single long braid. He is initially seen in tattered slave clothes with a metal muzzle and chains. Later, he wears a brown sleeveless vest and bandages over facial bruises.
+Personality: Resilient, skeptical of demons, and initially defiant, but he possesses a sense of humor and eventually becomes fiercely loyal after seeing Berje's power.
+--------------------
+Name: Loger Fridrich
+Role: The greatest blacksmith in the Dwarven Underground City of Wolfner.
+Appearance: A stout dwarf with a massive, multi-braided brown beard, thick eyebrows, and goggles perched on his head. He wears brown leather working gear and has a muscular build suited for smithing.
+Personality: Stoic and intensely focused on his craft, seemingly indifferent to the outside world until he is interrupted.
+--------------------
+Name: Luise Werft
+Role: The Princess of the Dwarven Kingdom.
+Appearance: A large muscular dwarven woman with pink hair in pigtails wearing a gold crown and a pink frilly dress over white and gold armor.
+Personality: Aggressive short-tempered and authoritative using threats of physical violence to command her subordinates.
+--------------------
+Name: Krutu
+Role: Chieftain of the Blue Frost Tribe who seeks to serve the Demon King.
+Appearance: A large Peul Orc with thick white fur, blue skin, and prominent tusks. He wears primitive red and brown armor and has several long white braids in his hair and beard.
+Personality: Intelligent, respectful, and pragmatic, valuing wisdom and the survival of his tribe over brute force.
+--------------------
+Name: Fortress Master
+Role: The commander of Holten Walk, a preparation station for the hero's journey.
+Appearance: An elderly human man with long white hair and a thick white beard, wearing formal grey and black fur-lined robes.
+Personality: Respectful, hospitable, and deeply honored to host the heroes of the kingdom.
+--------------------
+Name: Sir Warton
+Role: A practical military leader within Hillan Kargils party who leads the desertion.
+Appearance: A battle-hardened human knight with dark, messy hair wearing standard silver plate armor and a blue cape.
+Personality: Realistic and cynical, prioritizing the survival of his men over a seemingly impossible hero journey.
+--------------------
+Name: The Grand Master
+Role: The leader of the Heroes Guild who organizes a massive assault against the new Demon King.
+Appearance: A shadowed silhouette with glowing eyes and a powerful presence sitting in the Heroes Guild Headquarters.
+Personality: Patient and strategic, willing to wait for the right moment to strike with overwhelming force.
+--------------------
+Name: Reina Soldein
+Role: The Demon King of Winters and a participant in the alliance meeting.
+Appearance: A tall woman with long light blue hair, ice spikes forming a crown, and cold blue eyes. She wears elegant white and blue robes with a heavy white fur mantle.
+Personality: Calm, observant, and pragmatic, willing to deviate from traditional demon standards if it proves more productive.
+--------------------
+Name: Ugar Belveh
+Role: The Demon King of Indestructibility who represents the traditionalist faction.
+Appearance: A massive grey skinned titan with a single glowing eye and dark horns. He is clad in heavy dark purple plate armor.
+Personality: Aggressive, hot headed, and deeply committed to the ancient standards of the Demon Realm.
+--------------------
+Name: Jason Cochmund
+Role: The Demon King of Lies and host of the meeting at the Tower of Lies.
+Appearance: A young man with white hair, a purple streak, and a constant wide grin. He wears a formal white suit, green tie, and a monocle like eyepiece.
+Personality: Enigmatic, manipulative, and highly perceptive, possessing hidden powers that command respect even from other Demon Kings.
+--------------------
+Name: Aman
+Role: A former member of the Golden Moon Merchant Guild turned into a Black Knight by Berje.
+Appearance: A man with short brown hair wearing heavy purple and black knight armor with a red glowing mark on his chest.
+Personality: Terrified and submissive due to the forced magical contract.
+--------------------
+Name: Kaede
+Role: A runaway princess who wishes to become a hero and join the journey against the Demon King.
+Appearance: A beautiful young woman with short blonde hair and blue eyes wearing full silver plate armor and a red scarf.
+Personality: Determined and idealistic but naive about the dangers of the world.
+--------------------
+Name: Jetoson
+Role: The greedy shopkeeper of Jetosons World of Wonders who tries to scam Berje.
+Appearance: A young man with brown hair, a small mustache, and a soul patch, wearing a simple brown beanie and commoner clothes.
+Personality: Greedy, persistent, and a master at deception when it comes to selling goods.
+--------------------
+Name: Max Ormuth
+Role: The second prince of the Ormuth Kingdom and a primary antagonist.
+Appearance: A tanned muscular man with long wavy brown hair and a golden crown. He wears red and gold ancient warrior armor and wields a spear.
+Personality: Ruthless, manipulative, and greedy, willing to spark a global war for his own profit.
+--------------------
+Name: Three-Eyed Tiger
+Role: A demonic mount used by Berje to navigate through extreme environments like the lava within the Tower of Beasts.
+Appearance: A massive predatory beast with orange fur and black stripes, possessing three glowing yellow eyes and sharp fangs.
+Personality: Savage and loyal to its master, though it expresses clear fear when confronted with the intense heat of molten magma.
+--------------------
+Name: Rozel Charnt
+Role: Captain of the Dawn Flame Assault Unit and a Ten Stars Hero specializing in high-level flame magic.
+Appearance: A woman with long wavy orange-red hair and two thin braids wearing red and black plate armor with a high collar and a dark red cape. She carries a long staff topped with a glowing blue orb.
+Personality: Extremely arrogant, dismissive, and foul-mouthed toward anyone she considers inferior or weak.
+--------------------
+Name: Palav Disrod
+Role: Vice-Captain of the Hero Journey expedition and a Ten Stars Hero who has reached the peak of martial arts.
+Appearance: A massive and hulking man with greyish skin and glowing blue eyes. He is bald and possesses a physique of pure muscle, often seen topless to display his power.
+Personality: Stoic, intimidating, and focused entirely on martial might and combat efficiency.
+--------------------
+Name: King of Ormuth
+Role: The grieving and vengeful ruler of the Ormuth Kingdom who seeks to destroy the Beast Demon King.
+Appearance: An elderly man with messy white hair and a long thick beard wearing a golden crown and heavy royal robes lined with white fur.
+Personality: Wrathful, impulsive, and deeply mourning the loss of his son which fuels his hatred for demons.
+--------------------
+Name: Nairuniel
+Role: A powerful water spirit summoned by Ernan to serve as a floor boss in Berje's tower.
+Appearance: A high-ranking water spirit with long flowing blue hair, blue skin, and a dress made of water. In her smaller form, she has large expressive blue eyes and fins for ears.
+Personality: Mischievous and obsessed with romance novels, especially those involving forbidden love between different species.
+--------------------
+Name: Ralph Schmitz
+Role: A Ten Star Hero known as the Shield Master and the second-ranked member of the Ten Stars.
+Appearance: A man with long wavy blonde hair and sharp blue eyes wearing ornate gold and blue heavy plate armor. He carries a massive gold shield featuring a large face in the center.
+Personality: Stoic, authoritative, and reliable, serving as the dependable vanguard of the hero expedition.
+--------------------
+Name: Fylee
+Role: A member of the hero party who relies on Berje for protection.
+Appearance: A young man with messy grey hair wearing brown leather adventurer armor and carrying a standard longsword.
+Personality: Enthusiastic and deeply grateful to those who save him from danger.
+--------------------
+Name: Lavinia Ahkan
+Role: The Third Princess of the Ahkan Kingdom who was found in the ruins of the Tower of Beasts.
+Appearance: A young woman with curly lavender-colored hair and tired-looking eyes wearing a dark purple hooded cloak.
+Personality: Eccentric and obsessive, she is a researcher who values her chimera experiments and material gathering above her own safety.
+--------------------
+Name: Vivian Blunt
+Role: Queen of the Blood Moon Tribe and the Succubus Queen.
+Appearance: A beautiful demon with long pink hair, large black curved horns, and pointed ears. She wears a revealing black lace dress and has bat-like wings.
+Personality: Flirtatious, confident, and manipulative, she takes pride in her beauty and is easily offended by rejection.
+--------------------
+Name: Assassin
+Role: A mysterious observer who is tracking Berje in the Ergest Mountains.
+Appearance: A man wearing a grey hooded winter cloak and a tactical gas mask. He uses binoculars and a high-tech rifle scope to track his targets.
+Personality: Professional, cold, and patient, waiting for the perfect moment to strike.
+--------------------
+Name: Dapner Fillian
+Role: A Ten Stars Hero and mercenary specializing in intelligence gathering and concealment arts.
+Appearance: A man wearing a dark hooded cloak and a tactical gas mask. He uses binoculars and high-tech equipment for reconnaissance.
+Personality: Professional and cautious, though he is caught off guard by Berjes perception.
+--------------------
+Name: Blue Beast Commander
+Role: A high-ranking demon subordinate tasked with guarding the Ergest Mountains and reporting to Berje.
+Appearance: A muscular blue-skinned demon with multiple dark horns, sharp tusks, and long black hair. He wears spiked shoulder guards and dark armor.
+Personality: Deeply loyal and professional, he monitors the surroundings of Berjes tower with extreme diligence.
+--------------------
