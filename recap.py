@@ -21,7 +21,7 @@ from kokoro_onnx import Kokoro
 # Pull from environment variables passed by GitHub Actions
 START_URL = os.environ.get("START_URL", "https://manhuaus.com/manga/infinite-mage/chapter-1/").strip()
 VOICE_MODEL = "am_adam"  
-AUDIO_SPEED = 1.20    # Normal videos 20% faster natively
+AUDIO_SPEED = 1.20
 
 # Handle "all" or specific number of chapters
 max_chap_env = os.environ.get("MAX_CHAPTERS", "1").strip().lower()
