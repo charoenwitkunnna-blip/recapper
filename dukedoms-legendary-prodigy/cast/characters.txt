@@ -1,0 +1,285 @@
+Name: Hansung
+Role: The protagonist and legendary hero who is reincarnated after a betrayal.
+Appearance: A young hero with dark hair wearing blue and silver knight armor who gets betrayed and stabbed through the chest.
+Personality: Determined and filled with a burning desire for vengeance against the empire.
+--------------------
+Name: Count Brandenburg
+Role: The traitor who killed Hansung and the primary target of his revenge.
+Appearance: An older man with a scar over his right eye wearing white and gold divine armor.
+Personality: Cold, calculating, and ruthless in his pursuit of power for the empire.
+--------------------
+Name: Dale
+Role: The son of the Black Duke who retains his past memories and masters forbidden magic.
+Appearance: The reincarnated version of Hansung as a young boy and later a teenager with dark hair and purple magical energy.
+Personality: Genius, cold-blooded, and obsessed with growing strong enough to destroy his enemies.
+--------------------
+Name: Duke Jackson
+Role: The Black Duke and father of Dale who is a master of necromancy.
+Appearance: A tall man with long dark hair and sharp features wearing a formal dark suit.
+Personality: Strict and observant but deeply impressed by his sons monstrous talent.
+--------------------
+Name: Sephia
+Role: A high ranking magic officer and Dales instructor.
+Appearance: An elf with long green hair and pointed ears wearing a dark mages cloak.
+Personality: Highly skilled but visibly shaken by Dales immeasurable talent for killing.
+--------------------
+Name: Sir Badel
+Role: The final target Hansung is forced to kill before his betrayal.
+Appearance: A noble knight with short blonde hair wearing silver armor.
+Personality: Dignified and honorable even in the face of death.
+--------------------
+Name: Duchess Saxen
+Role: Hansungs new mother in his reincarnated life.
+Appearance: A beautiful woman with long blonde hair and kind blue eyes wearing a white gown.
+Personality: Warm, loving, and deeply compassionate towards her child.
+--------------------
+Name: The Emperor
+Role: The manipulative ruler who summoned and enslaved Hansung.
+Appearance: An elderly bald man with a long white beard wearing ornate brown and gold robes.
+Personality: Cold, ruthless, and treats heroes like disposable tools.
+--------------------
+Name: Helmut
+Role: A captain of the knights and a close associate of the Duke who acts as an uncle figure to Dale.
+Appearance: A tall man with short blue-grey hair and a goatee wearing heavy silver and gold plate armor with a sword at his hip.
+Personality: Boisterous, cheerful, and fiercely loyal to the ducal family.
+--------------------
+Name: The Crimson Prince
+Role: A high ranking noble who is keeping a close watch on the Saxen family.
+Appearance: A young man with messy red hair and sharp red eyes wearing a formal crimson and white suit.
+Personality: Arrogant and curious about the rumored power of the young prodigy.
+--------------------
+Name: Lilian
+Role: Dales younger sister and the new joy of the Saxen household.
+Appearance: A small infant with dark hair and bright blue eyes wrapped in white and brown swaddling clothes.
+Personality: Quiet and observant but becomes joyful specifically when her brother Dale holds her.
+--------------------
+Name: Orc Horde
+Role: The invading force targeting the Saxen territory and Dales first real test in battle.
+Appearance: Massive grey-skinned monsters with red glowing eyes and large tusks wearing heavy leather armor and carrying giant axes.
+Personality: Savage and bloodthirsty creatures that respect only strength.
+--------------------
+Name: Winter Wardens
+Role: The hidden ambush unit of House Saxen that initiates the battle.
+Appearance: A unit of rangers wearing dark hooded cloaks and light armor equipped with powerful longbows.
+Personality: Disciplined and precise elite soldiers who strike from the shadows.
+--------------------
+Name: Vanessa Orhart
+Role: The mother of Charlotte and a survivor from a fallen noble house seeking refuge.
+Appearance: A woman with light hair wearing a black mourning-style dress and a wide-brimmed hat with a veil.
+Personality: Protective, desperate, and humbled by her family's tragic downfall.
+--------------------
+Name: Charlotte Orhart
+Role: The daughter of House Orhart and a survivor targeted by the empire.
+Appearance: A young girl with long blonde hair and sharp green eyes wearing a white and gold military coat.
+Personality: Hostile, traumatized, and deeply distrustful of imperial nobles.
+--------------------
+Name: Eve
+Role: A servant of House Saxen who assists in managing guests.
+Appearance: A maid with long blonde hair tied in thick braids wearing a standard brown and white maid uniform.
+Personality: Polite and efficient in her duties.
+--------------------
+Name: Thief Leader
+Role: The leader of the thieves guild ambush squad.
+Appearance: A man with messy green hair and sharp yellow eyes wearing dark leather assassin gear.
+Personality: Arrogant, sadistic, and overconfident in his aura techniques.
+--------------------
+Name: Bait Boy
+Role: A tool used by the thieves guild to lure victims into traps.
+Appearance: A small child wearing a brown cap and tattered rags.
+Personality: Fearful and desperate under the control of the guild.
+--------------------
+Name: Marquis Yuris
+Role: An influential noble and envoy from the Imperial Court sent to evaluate the young prodigy of House Saxen.
+Appearance: A young man with messy bright red hair and a charming smile wearing a white and red formal suit with gold accents.
+Personality: Polite and refined but clearly hiding a calculating and dangerous agenda behind his friendly facade.
+--------------------
+Name: Petro
+Role: A low-ranking noble representative of the Emperor who attempts to assault a maid.
+Appearance: A middle-aged man with messy red hair and a mustache wearing a dark noble suit and a large gem brooch.
+Personality: Arrogant, predatory, and cowardly when confronted with actual power.
+--------------------
+Name: Velic
+Role: The top graduate of the academy and a rival participant in the tower trial.
+Appearance: A young man with short blonde hair and freckles wearing a formal grey and black academy uniform.
+Personality: Arrogant, overconfident, and dismissive of Dales reputation.
+--------------------
+Name: Eris
+Role: The Secretary General of the tower and the overseer of the trial.
+Appearance: A woman with short dark hair and red eyes wearing glasses and a sharp grey and white formal suit.
+Personality: Professional, observant, and strictly follows the rules of the tower.
+--------------------
+Name: Flesh Golem
+Role: The guardian of the towers second tier trial.
+Appearance: A massive grey-skinned monster with glowing red eyes and heavy muscle-bound features that towers over its opponents.
+Personality: A mindless and destructive creature designed to test a mages offensive capabilities.
+--------------------
+Name: Albert Rosenheim
+Role: A third circle master and Dales opponent in the eleventh tier magic duel.
+Appearance: A man with slicked-back silver hair and sharp features wearing a long grey mages robe and carrying a magical grimoire.
+Personality: Arrogant and condescending toward younger mages while being ruthless in combat.
+--------------------
+Name: Headless Knight
+Role: The legendary guardian of the towers twentieth tier.
+Appearance: A massive knight in black plate armor with a glowing red energy plume coming from its neck riding a demonic horse.
+Personality: Absolutely loyal and obedient to those who possess superior magical authority.
+--------------------
+Name: Baron Parker
+Role: The instigator of the territorial war who serves as a puppet for Count Brandenburg.
+Appearance: A low ranking noble from a neighboring territory who challenges House Saxen.
+Personality: Opportunistic and bold enough to challenge a high ranking Duke for a copper mine.
+--------------------
+Name: Knight Order of Saint Magdalena
+Role: A powerful military force sent by the Empire to assist Baron Parker.
+Appearance: A group of elite knights wearing ornate silver and gold armor with glowing magical weapons.
+Personality: Strict and formidable warriors serving the interests of the Empire.
+--------------------
+Name: Phillip
+Role: The eldest son of Count Brandenburg and the incompetent figurehead for his army.
+Appearance: A young man with messy blonde hair wearing a white and gold vest often seen holding a wine bottle.
+Personality: Lazy, delusional, and arrogant despite his lack of actual skill.
+--------------------
+Name: Sir Milvas
+Role: The elite knight who handles actual command for the Brandenburg forces.
+Appearance: A stoic knight with short light hair wearing polished silver and gold plate armor.
+Personality: Professional and strictly obedient to the Count.
+--------------------
+Name: Baron Greenbelt
+Role: The local lord requesting protection for his mines.
+Appearance: A middle-aged man with slicked-back brown hair and a mustache wearing a green and white noble suit.
+Personality: Skeptical and easily intimidated by the young prodigy.
+--------------------
+Name: Harbuck
+Role: An arrogant knight under Baron Greenbelt who challenges Dale to a duel.
+Appearance: A man with slicked-back reddish-pink hair and a scar across his left cheek wearing silver and black plate armor.
+Personality: Boastful, overconfident, and dismissive of Dale because of his young age.
+--------------------
+Name: Sir Bale
+Role: A high-ranking knight serving House Saxen who oversees the training of new recruits.
+Appearance: A tall knight with long dark hair tied back wearing sleek black dragon-like plate armor.
+Personality: Silent, disciplined, and ruthlessly efficient in following Dales orders.
+--------------------
+Name: Cardinal Nikolai
+Role: A high ranking official of the Church of the Goddess Cystina who views Dales power as a threat.
+Appearance: A man with short silver hair and a kind but calculating expression wearing dark ornate robes with a gold sun like emblem on his chest.
+Personality: Polite and refined on the surface but deeply manipulative and opportunistic.
+--------------------
+Name: Lize
+Role: Dales younger sister and the light of the Saxen household.
+Appearance: A young girl with short dark hair and bright blue eyes wearing a blue dress with a white collar and a large white bow.
+Personality: Energetic and innocent and deeply attached to her older brother Dale.
+--------------------
+Name: Library Guardians
+Role: The eternal protectors of the forbidden secret archive under the cathedral.
+Appearance: Elite undead knights wearing ornate silver and gold church armor with glowing red eyes and wielding heavy swords and maces.
+Personality: Mindless and aggressive defenders that attack any intruder without hesitation.
+--------------------
+Name: Black Goat Entity
+Role: A powerful demonic being that offers forbidden contracts to those with sufficient blood and hatred.
+Appearance: A massive and terrifying hooded figure with a muscular build and a monstrous mouth filled with sharp teeth that exists within a realm of blood.
+Personality: Predatory and hungry for slaughter and destruction.
+--------------------
+Name: Avatar of the Black Goat
+Role: The sentient spirit of the forbidden grimoire who forms a contract with Dale.
+Appearance: A young girl with long silver hair and black curved horns wearing a gothic black dress with a purple gemstone brooch.
+Personality: Playful and lonely but possesses a terrifying and sadistic hunger for destruction.
+--------------------
+Name: Duke Frederick
+Role: The original creator of the Book of Black Goat who sacrificed his own daughter for power.
+Appearance: A man in a dark suit with a red jewel pin seen in a memory standing over a sacrificial victim.
+Personality: Ruthless and obsessed with reaching the truth beyond death at any cost.
+--------------------
+Name: Holy Guardians
+Role: Divine spirits summoned by the church to eliminate those who use dark magic.
+Appearance: Elite warriors wearing silver and gold plate armor with massive white feathered wings and golden swords.
+Personality: Mindless and unwavering enforcers of light that follow the orders of their summoner.
+--------------------
+Name: Sir Kaelen
+Role: A high-ranking knight instructor of House Saxen who trains Charlotte.
+Appearance: A tall man with dark hair and a short beard wearing heavy grey and black plate armor.
+Personality: Professional, encouraging, and deeply impressed by raw talent.
+--------------------
+Name: Death Order
+Role: The hidden military foundation of House Saxen used to protect the territory without draining the casters mana.
+Appearance: An massive army of undead knights clad in dark heavy plate armor with glowing purple eyes and wielding large swords.
+Personality: Mindless and obedient warriors that serve the direct lineage of House Saxen with absolute loyalty.
+--------------------
+Name: Wilhelm of Gael
+Role: A minor lord from the north seeking the favor of House Saxen.
+Appearance: A middle-aged man with short brown hair and a goatee wearing heavy purple and grey plate armor.
+Personality: Ambitious and eager to climb the social ladder of the empire.
+--------------------
+Name: Beth
+Role: The eldest son of Wilhelm of Gael who wants to prove himself in battle.
+Appearance: A young man with short light brown hair and sharp features wearing purple and grey knight armor.
+Personality: Arrogant, boastful, and desperate for the attention of the Black Young Master.
+--------------------
+Name: Yonez
+Role: The second son of Baron Kenneth and a mercenary leader who challenges Dale.
+Appearance: A young man with messy purple hair and red eyes wearing sleek black plate armor.
+Personality: Resentful of those born with everything but possesses a strong warrior spirit.
+--------------------
+Name: Sir Kals
+Role: A loyal mercenary and member of Yonezs unit who witnesses the power of the young master.
+Appearance: A young man with short light brown hair wearing a simple grey tunic and armor plates.
+Personality: Observant, grounded, and deeply concerned about the gap in power between commoners and nobility.
+--------------------
+Name: Shadow Watchers
+Role: Mysterious observers tracking Dale's movements during the battle.
+Appearance: Hooded figures dressed in black cloaks with glowing red eyes hiding behind rocks.
+Personality: Quiet and calculating hunters waiting for the right moment to strike.
+--------------------
+Name: Red Tower Purifier
+Role: Elite pyromancers sent by the Empire to eliminate the young prodigy Dale.
+Appearance: A masked battle mage wearing a dark cloak with red patterns and a hood, wielding a magical book and controlling intense orange flames.
+Personality: Cold, fanatical, and ruthlessly efficient in their mission to burn enemies of the state.
+--------------------
+Name: Night Crow Knight Order
+Role: The elite shock cavalry of House Saxen responsible for breaking enemy lines.
+Appearance: Elite knights clad in dark heavy plate armor riding powerful warhorses through magical explosions.
+Personality: Fearless and unwavering warriors who follow the young masters orders even into certain death.
+--------------------
+Name: Purifier Captain
+Role: The leader of the Imperial Purifiers sent to eliminate the Saxen family.
+Appearance: A man with long wavy brown hair and sharp features wearing a dark hooded cloak with red patterns.
+Personality: Fanatical, arrogant, and willing to sacrifice his own life for the glory of the Empire.
+--------------------
+Name: Elena
+Role: A noblewoman who is seduced and subsequently poisoned by Marquis Yuris.
+Appearance: A beautiful woman with long light brown hair wearing a white silk and lace nightgown.
+Personality: Smitten and completely unsuspecting of the danger her lover poses.
+--------------------
+Name: Orc Warboss
+Role: The commander of the orc invasion and the primary threat on the battlefield.
+Appearance: A massive grey-skinned monster with white glowing eyes and two long tusks protruding from his mouth, wearing heavy iron shoulder pads and leather straps.
+Personality: Savage and loud, leading his horde with brute force and terrifying war cries.
+--------------------
+Name: Imperial Envoy
+Role: A messenger from the capital sent to deliver orders from the Emperor.
+Appearance: A middle-aged man with a thin mustache and slicked-back brown hair wearing ornate purple and gold robes.
+Personality: Arrogant, formal, and dismissive of those living on the borders.
+--------------------
+Name: Elizabeth
+Role: A former associate of Marquis Yuris who was poisoned and kept as a silent witness to his crimes.
+Appearance: A pale, gaunt woman with long grey hair and sunken eyes wearing a tattered grey gown.
+Personality: Lifeless and unresponsive after being destroyed by the Marquis.
+--------------------
+Name: Leonard
+Role: The top student of the academy and the son of the Crimson Magic Tower Master.
+Appearance: A young man with short blonde hair and sharp gold eyes wearing a brown and white academy uniform.
+Personality: Arrogant, elitist, and willing to cheat to maintain his status as the school king.
+--------------------
+Name: Professor Ron
+Role: An instructor at the Imperial Academy who is easily intimidated by high-ranking students.
+Appearance: A middle-aged man with short dark hair wearing a grey suit and gloves.
+Personality: Weak-willed and survivalist, prioritizing his job over the safety of his students.
+--------------------
+Name: Valror
+Role: A student at the imperial academy and Dales designated opponent for the graduation exam.
+Appearance: A young man with light-colored hair and sharp eyes wearing a formal academy uniform.
+Personality: A skilled student who follows the rules but finds himself caught in the crossfire of Leonards obsession.
+--------------------
+Name: Count Walter
+Role: A high-ranking elder of the magic tower and Leonards father.
+Appearance: A middle-aged man with short slicked-back grey hair and a sharp mustache wearing a dark noble suit.
+Personality: Resentful and filled with hatred toward House Saxen.
+--------------------
