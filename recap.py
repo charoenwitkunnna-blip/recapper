@@ -21,7 +21,7 @@ from kokoro_onnx import Kokoro
 # Pull from environment variables passed by GitHub Actions
 START_URL = os.environ.get("START_URL", "https://manhuaus.com/manga/infinite-mage/chapter-1/").strip()
 VOICE_MODEL = "am_adam"  
-AUDIO_SPEED = 1.0    
+AUDIO_SPEED = 1.20    # Changed to 1.20 to make normal videos 20% faster natively
 
 # Handle "all" or specific number of chapters
 max_chap_env = os.environ.get("MAX_CHAPTERS", "1").strip().lower()
@@ -169,6 +169,8 @@ def process_chapter(chapter_url):
         f"EXISTING CHARACTER LORE DATABASE:\n{existing_chars_text if existing_chars_text else 'None yet.'}\n\n"
         "NARRATION RULES:\n"
         "- Hook the viewer immediately.\n"
+        "- DO NOT SKIP ANY DETAILS. Provide a comprehensive, highly detailed recap of every key event, dialogue, and visual element.\n"
+        "- Expand on the narrative deeply. Ensure no plot points, character interactions, or important visual details are left out.\n"
         "- Use dramatic pacing, active voice, and high-energy storytelling.\n"
         "- Describe character actions, emotions, and plot twists dynamically.\n\n"
         "TTS AUDIO COMPATIBILITY RULES (CRITICAL):\n"
@@ -195,7 +197,7 @@ def process_chapter(chapter_url):
             "panels": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {"image_index": {"type": "INTEGER"}, "start_mark": {"type": "NUMBER"}, "end_mark": {"type": "NUMBER"}, "narration": {"type": "STRING"}, "effect": {"type": "STRING", "enum":["zoom_in", "zoom_out", "pan_down", "pan_up"]}}, "required":["image_index", "start_mark", "end_mark", "narration", "effect"]}}
         }, "required":["new_characters", "panels"]
     }
-    payload = {"contents":[{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
+    payload = {"contents":[{"parts":[{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
     
     script_data, current_key = None, 0
     for _ in range(15):
@@ -267,7 +269,6 @@ def process_chapter(chapter_url):
         aspect_ratio = crop.height / crop.width
         effect = block.get('effect', 'zoom_in').lower()
         
-        # FIX FOR FILE SIZE: Added '-crf 28' and changed to '-preset faster'. This shrinks file sizes by 80%+ while preserving quality.
         common_flags =["-c:v", "libx264", "-preset", "faster", "-crf", "28", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
         target_w = 1080 
@@ -293,12 +294,13 @@ def process_chapter(chapter_url):
             bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920 - s_w) // 2, (1080 - s_h) // 2))
             bg.save(f_path)
 
+            # Fix for 'jittery/glitchy' wobble when zooming. Pre-Scaling to 7680x4320 inside the filter removes pixel-rounding bounce.
             if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=3840x2160,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"scale=7680x4320,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
             else:
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=3840x2160,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"scale=7680x4320,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
         return (cmd, v_out)
 
@@ -340,7 +342,7 @@ def stitch_all_chapters():
     if os.path.exists(list_path): os.remove(list_path)
 
 
-# ================= NEW: 1.5x SPEED SHORTS GENERATOR =================
+# ================= 1.35x SPEED SHORTS GENERATOR =================
 def create_shorts_teaser():
     print(f"\n{'='*50}\n[SHORT GENERATOR] Creating High-Speed YouTube Shorts Teaser\n{'='*50}")
     
@@ -400,20 +402,18 @@ def create_shorts_teaser():
         "-pix_fmt", "yuv420p", "-t", str(cta_dur), cta_video_path
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # 4. Extract Chapter 1, Speed it up 1.5x, Format Vertical, Limit length to exactly fit under 60 seconds.
-    print("Applying 1.5x Speed to Chapter 1 and formatting for Shorts...")
+    # 4. Extract Chapter 1, Speed it up exactly 1.35x, Sync visual and audio.
+    print("Applying 1.35x Speed to Chapter 1 and formatting for Shorts...")
     hook_video_path = os.path.join(shorts_dir, "hook_video.mp4")
     
-    # Max duration for YouTube shorts is 60 seconds. 
-    # We subtract our CTA time, and leave a 1-second margin of error.
     max_hook_length = 59.0 - cta_dur 
 
     # Advanced FFmpeg filter:
-    # 1. setpts=0.666667*PTS (Makes Video 1.25x faster)
+    # 1. setpts=0.74074*PTS (Makes Video EXACTLY 1.35x faster)
     # 2. scale & blur (Formats for 9:16 layout safely)
-    # 3. atempo=1.25 (Makes Audio 1.25x faster without destroying pitch)
-    vf_string = "[0:v]setpts=0.666667*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.666667*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
-    af_string = "[0:a]atempo=1.25[aout]"
+    # 3. atempo=1.35 (Makes Audio EXACTLY 1.35x faster, ensuring PERFECT synchronization)
+    vf_string = "[0:v]setpts=0.74074*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.74074*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
+    af_string = "[0:a]atempo=1.35[aout]"
     
     subprocess.run([
         "ffmpeg", "-y", "-i", first_chap_video,
