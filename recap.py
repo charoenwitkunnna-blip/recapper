@@ -37,7 +37,7 @@ url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS = []
+GEMINI_API_KEYS =[]
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -75,7 +75,7 @@ headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
 def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
-    url_parts = [p for p in chapter_url.split('/') if p]
+    url_parts =[p for p in chapter_url.split('/') if p]
     chapter_str = url_parts[-1] 
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
@@ -87,7 +87,7 @@ def process_chapter(chapter_url):
     chapters_dir = os.path.join(base_dir, "chapters")
     current_chap_dir = os.path.join(chapters_dir, chap_num)
 
-    for d in [cast_dir, chapters_dir, current_chap_dir, temp_dir]:
+    for d in[cast_dir, chapters_dir, current_chap_dir, temp_dir]:
         os.makedirs(d, exist_ok=True)
 
     char_file = os.path.join(cast_dir, "characters.txt")
@@ -336,12 +336,15 @@ def process_chapter(chapter_url):
             bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920 - s_w) // 2, (1080 - s_h) // 2))
             bg.save(f_path)
 
+            # ==============================
+            # THE 4K SSAA ANTI-JITTER FIX
+            # ==============================
             if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=7680x4320,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"scale=3840x2160:flags=lanczos,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=3840x2160:fps=30,scale=1920x1080:flags=lanczos,setsar=1,format=yuv420p"] + common_flags + [v_out]
             else:
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=7680x4320,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"scale=3840x2160:flags=lanczos,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=3840x2160:fps=30,scale=1920x1080:flags=lanczos,setsar=1,format=yuv420p"] + common_flags +[v_out]
         
         return (cmd, v_out)
 
