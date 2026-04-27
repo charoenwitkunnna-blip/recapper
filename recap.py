@@ -21,7 +21,7 @@ from kokoro_onnx import Kokoro
 # Pull from environment variables passed by GitHub Actions
 START_URL = os.environ.get("START_URL", "https://manhuaus.com/manga/infinite-mage/chapter-1/").strip()
 VOICE_MODEL = "am_adam"  
-AUDIO_SPEED = 1.20    # Normal videos 20% faster natively
+AUDIO_SPEED = 1.20    # Changed to 1.20 to make normal videos 20% faster natively
 
 # Handle "all" or specific number of chapters
 max_chap_env = os.environ.get("MAX_CHAPTERS", "1").strip().lower()
@@ -37,7 +37,7 @@ url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS =[]
+GEMINI_API_KEYS = []
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -64,7 +64,7 @@ for _, key_value in temp_keys:
 os.makedirs("videos", exist_ok=True)
 
 with open(".gitignore", "w") as f:
-    f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\n")
+    f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\nvideos/\n")
 
 font_path = "Roboto-Black.ttf"
 if not os.path.exists(font_path):
@@ -80,23 +80,18 @@ def process_chapter(chapter_url):
     chap_num_match = re.search(r'\d+', chapter_str)
     chap_num = chap_num_match.group(0) if chap_num_match else chapter_str
 
-    # --- DIRECTORY STRUCTURE ---
     base_dir = MANGA_NAME
     cast_dir = os.path.join(base_dir, "cast")
-    temp_dir = os.path.join(base_dir, "temp")
     chapters_dir = os.path.join(base_dir, "chapters")
     current_chap_dir = os.path.join(chapters_dir, chap_num)
+    temp_dir = os.path.join(base_dir, "temp")
 
     for d in[cast_dir, chapters_dir, current_chap_dir, temp_dir]:
         os.makedirs(d, exist_ok=True)
 
     char_file = os.path.join(cast_dir, "characters.txt")
-    prev_context_file = os.path.join(base_dir, "last_chapter_context.txt")
-    highest_file = os.path.join(base_dir, "highest.txt")
-    
-    # Save video and script inside their specific chapter folder
+    highest_file = os.path.join(chapters_dir, "highest.txt")
     final_path = os.path.join(current_chap_dir, "video.mp4")
-    script_txt_path = os.path.join(current_chap_dir, "script.txt")
 
     if os.path.exists(final_path):
         print(f"[{chap_num}] Video already exists! Skipping...")
@@ -115,12 +110,6 @@ def process_chapter(chapter_url):
     if os.path.exists(char_file):
         with open(char_file, "r", encoding="utf-8") as f:
             existing_chars_text = f.read()
-
-    # --- READ PREVIOUS CHAPTER CONTEXT ---
-    previous_story_context = ""
-    if os.path.exists(prev_context_file):
-        with open(prev_context_file, "r", encoding="utf-8") as f:
-            previous_story_context = f.read()
 
     print(f"[{chap_num}] Scraping Images...")
     image_urls, site_cookies, next_url =[], {}, None
@@ -178,11 +167,6 @@ def process_chapter(chapter_url):
         "Act as a professional Manhwa recap scriptwriter. Follow strict high-energy rules for YouTube/TikTok.\n\n"
         "CRITICAL INSTRUCTION: DO NOT output markdown blocks (like ```json). Return pure JSON format ONLY.\n\n"
         f"EXISTING CHARACTER LORE DATABASE:\n{existing_chars_text if existing_chars_text else 'None yet.'}\n\n"
-        
-        f"PREVIOUS CHAPTER STORY CONTEXT:\n"
-        f"{previous_story_context if previous_story_context else 'This is the first chapter.'}\n"
-        "RULE FOR PREVIOUS CONTEXT: Use the context above ONLY to understand what is currently happening. DO NOT re-narrate the previous chapter. Pick up the story seamlessly from where it left off based on the new images.\n\n"
-        
         "NARRATION RULES:\n"
         "- Hook the viewer immediately.\n"
         "- DO NOT SKIP ANY DETAILS. Provide a comprehensive, highly detailed recap of every key event, dialogue, and visual element.\n"
@@ -193,7 +177,7 @@ def process_chapter(chapter_url):
         "- The 'narration' text MUST be a single continuous string. DO NOT use line breaks (\\n).\n"
         "- DO NOT use ellipses (...). Use a single period instead.\n"
         "- DO NOT use multiple punctuation marks together (no !!, ??, or ?!). Use only one.\n"
-        "- DO NOT use asterisks, brackets, or parentheses for actions (no *gasps* or [sighs]).\n"
+        "- DO NOT use asterisks, brackets, or parentheses for actions (no *gasps* or[sighs]).\n"
         "- DO NOT use quotation marks (\", \') or em-dashes (—). Keep it entirely plain text.\n\n"
         "CAMERA & MARKER RULES:\n"
         "- Look at the images provided. There are yellow numbers acting as markers along the left edge.\n"
@@ -213,7 +197,7 @@ def process_chapter(chapter_url):
             "panels": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {"image_index": {"type": "INTEGER"}, "start_mark": {"type": "NUMBER"}, "end_mark": {"type": "NUMBER"}, "narration": {"type": "STRING"}, "effect": {"type": "STRING", "enum":["zoom_in", "zoom_out", "pan_down", "pan_up"]}}, "required":["image_index", "start_mark", "end_mark", "narration", "effect"]}}
         }, "required":["new_characters", "panels"]
     }
-    payload = {"contents": [{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
+    payload = {"contents":[{"parts":[{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
     
     script_data, current_key = None, 0
     for _ in range(15):
@@ -242,32 +226,6 @@ def process_chapter(chapter_url):
 
     if not script_data: return next_url, False
 
-    # --- SAVE SCRIPT AND UPDATE CONTEXT ---
-    try:
-        full_script_text = f"Chapter {chap_num} Script\n=========================================\n\n"
-        current_narration_list =[]
-        
-        for panel in script_data.get('panels',[]):
-            narration = panel.get('narration', '')
-            effect = panel.get('effect', '')
-            img_idx = panel.get('image_index', '')
-            
-            full_script_text += f"Panel {img_idx}:\n{narration}\n(Camera: {effect})\n\n"
-            current_narration_list.append(narration)
-            
-        current_narration = " ".join(current_narration_list)
-        
-        # Write context for the NEXT chapter
-        with open(prev_context_file, "w", encoding="utf-8") as f:
-            f.write(current_narration)
-            
-        # Write readable script directly inside the chapter's folder
-        with open(script_txt_path, "w", encoding="utf-8") as f:
-            f.write(full_script_text)
-    except Exception as e:
-        print(f"[{chap_num}] Note: Failed to save script/context texts: {e}")
-
-    # --- SAVE NEW CHARACTER LORE ---
     if script_data.get('new_characters'):
         with open(char_file, "a", encoding="utf-8") as f:
             for c in script_data['new_characters']:
@@ -325,7 +283,7 @@ def process_chapter(chapter_url):
             
             if effect == 'pan_up':
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
             else:
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
                        "-vf", f"crop=1920:1080:0:min(in_h-1080\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
@@ -336,15 +294,13 @@ def process_chapter(chapter_url):
             bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920 - s_w) // 2, (1080 - s_h) // 2))
             bg.save(f_path)
 
-            # ==============================
-            # THE 4K SSAA ANTI-JITTER FIX
-            # ==============================
+            # Fix for 'jittery/glitchy' wobble when zooming. Pre-Scaling to 7680x4320 inside the filter removes pixel-rounding bounce.
             if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=3840x2160:flags=lanczos,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=3840x2160:fps=30,scale=1920x1080:flags=lanczos,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"scale=7680x4320,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
             else:
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=3840x2160:flags=lanczos,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=3840x2160:fps=30,scale=1920x1080:flags=lanczos,setsar=1,format=yuv420p"] + common_flags +[v_out]
+                       "-vf", f"scale=7680x4320,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
         return (cmd, v_out)
 
@@ -355,8 +311,7 @@ def process_chapter(chapter_url):
             if res: ffmpeg_tasks.append(res)
 
     print(f"[{chap_num}] Rendering Synced Clips...")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:
-        [subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
 
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
@@ -382,16 +337,16 @@ def stitch_all_chapters():
     list_path = os.path.join(MANGA_NAME, "full_recap_list.txt")
     with open(list_path, "w") as f:
         for num, vp in valid_chaps: f.write(f"file '{os.path.abspath(vp).replace(chr(92), '/')}'\n")
-    
-    # Put ONLY the full recap in the videos folder
     final_recap_path = os.path.join("videos", f"{MANGA_NAME}_full_recap.mp4")
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", final_recap_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if os.path.exists(list_path): os.remove(list_path)
+
 
 # ================= 1.35x SPEED SHORTS GENERATOR =================
 def create_shorts_teaser():
     print(f"\n{'='*50}\n[SHORT GENERATOR] Creating High-Speed YouTube Shorts Teaser\n{'='*50}")
     
+    # 1. We ONLY want Chapter 1 for the Short as requested. 
     chapters_dir = os.path.join(MANGA_NAME, "chapters")
     if not os.path.exists(chapters_dir): 
         print("No chapters found to create shorts.")
@@ -407,23 +362,27 @@ def create_shorts_teaser():
     valid_chaps.sort(key=lambda x: x[0])
     if not valid_chaps: return
     
+    # Extract just the very first chapter processed
     first_chap_video = valid_chaps[0][1] 
 
     shorts_dir = os.path.join(MANGA_NAME, "shorts_temp")
     os.makedirs(shorts_dir, exist_ok=True)
 
+    # 2. Generate CTA Audio (Call to Action)
     print("Generating Call-to-Action Audio...")
     teaser_audio_text = "Want to see what happens next? Watch the full recap on my channel!"
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
     try:
         samples, _ = kokoro.create(teaser_audio_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
     except:
+        # Fallback safeguard
         samples, _ = kokoro.create("Watch the full recap on my channel!", voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
 
     cta_audio_path = os.path.join(shorts_dir, "cta_audio.wav")
     sf.write(cta_audio_path, samples, 24000)
     cta_dur = len(samples) / 24000.0
 
+    # 3. Generate CTA Visuals (Black vertical background with text)
     print("Generating Call-to-Action Visuals...")
     cta_img_path = os.path.join(shorts_dir, "cta_img.jpg")
     img = Image.new('RGB', (1080, 1920), color=(15, 15, 15)) 
@@ -443,11 +402,16 @@ def create_shorts_teaser():
         "-pix_fmt", "yuv420p", "-t", str(cta_dur), cta_video_path
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    # 4. Extract Chapter 1, Speed it up exactly 1.35x, Sync visual and audio.
     print("Applying 1.35x Speed to Chapter 1 and formatting for Shorts...")
     hook_video_path = os.path.join(shorts_dir, "hook_video.mp4")
     
     max_hook_length = 59.0 - cta_dur 
 
+    # Advanced FFmpeg filter:
+    # 1. setpts=0.74074*PTS (Makes Video EXACTLY 1.35x faster)
+    # 2. scale & blur (Formats for 9:16 layout safely)
+    # 3. atempo=1.35 (Makes Audio EXACTLY 1.35x faster, ensuring PERFECT synchronization)
     vf_string = "[0:v]setpts=0.74074*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.74074*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
     af_string = "[0:a]atempo=1.35[aout]"
     
@@ -455,19 +419,19 @@ def create_shorts_teaser():
         "ffmpeg", "-y", "-i", first_chap_video,
         "-filter_complex", f"{vf_string};{af_string}",
         "-map", "[vout]", "-map", "[aout]",
-        "-t", str(max_hook_length), 
-        "-c:v", "libx264", "-preset", "faster", "-crf", "28",
+        "-t", str(max_hook_length), # Force it under limits
+        "-c:v", "libx264", "-preset", "faster", "-crf", "28", # Keeping file sizes lean
         "-c:a", "aac", "-b:a", "128k", "-pix_fmt", "yuv420p",
         hook_video_path
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    # 5. Stitch Speed-up Hook + the CTA Teaser
     print("Stitching Short together...")
     list_path = os.path.join(shorts_dir, "list.txt")
     with open(list_path, "w") as f:
         f.write(f"file '{os.path.abspath(hook_video_path).replace(chr(92), '/')}'\n")
         f.write(f"file '{os.path.abspath(cta_video_path).replace(chr(92), '/')}'\n")
 
-    # Put ONLY the shorts teaser in the videos folder
     final_short_path = os.path.join("videos", f"{MANGA_NAME}_shorts.mp4")
     subprocess.run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
@@ -476,6 +440,7 @@ def create_shorts_teaser():
 
     print(f"✅ Fast-Paced Short Teaser generated successfully: {final_short_path}")
     shutil.rmtree(shorts_dir, ignore_errors=True) 
+
 
 # ================= EXECUTION =================
 if not os.path.exists("kokoro-v1.0.onnx"):
