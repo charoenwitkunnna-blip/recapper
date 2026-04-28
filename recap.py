@@ -1,5 +1,6 @@
 from seleniumbase import SB
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from urllib.parse import urljoin
 import io
 import base64
 import requests
@@ -74,9 +75,24 @@ font = ImageFont.truetype(font_path, 28)
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
 def extract_next_url(sb):
-    """Robust helper function to find 'Next' chapter URL across different manga sites."""
+    """Robust helper function to find 'Next' chapter URL (Handles Relative Links & React/Vue)."""
     sb.sleep(1.5)  # Wait for JS frameworks (React/Vue) to render navigation components
-    next_url = None
+    current_url = sb.get_current_url()
+    
+    # 1. Fast path: Direct explicit attributes
+    try:
+        for sel in["a.next_page", "a[aria-label='Next']", "a[aria-label='next']"]:
+            if sb.is_element_present(sel):
+                for el in sb.find_elements("css selector", sel):
+                    cls = (el.get_attribute("class") or "").lower()
+                    if "pointer-events-none" in cls or "disabled" in cls:
+                        continue
+                    href = el.get_attribute("href")
+                    if href and len(href) > 2 and "javascript" not in href:
+                        return urljoin(current_url, href) # Safely joins relative URLs like '/series/chapter-2'
+    except: pass
+    
+    # 2. Fallback path: Loop over all links and check text/labels
     try:
         elements = sb.find_elements("css selector", "a")
         for el in elements:
@@ -86,17 +102,16 @@ def extract_next_url(sb):
                 cls = (el.get_attribute("class") or "").lower()
                 
                 if text == "next" or aria == "next" or "next_page" in cls or "next chapter" in text:
-                    # Respect VortexScans disabled "pointer-events-none" styling for end-of-series
                     if "pointer-events-none" not in cls and "disabled" not in cls:
                         href = el.get_attribute("href")
-                        if href and "http" in href:
-                            next_url = href
-                            break
+                        if href and len(href) > 2 and "javascript" not in href:
+                            return urljoin(current_url, href)
             except:
                 continue
     except:
         pass
-    return next_url
+        
+    return None
 
 def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
