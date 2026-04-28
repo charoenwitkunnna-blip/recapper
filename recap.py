@@ -73,6 +73,31 @@ font = ImageFont.truetype(font_path, 28)
 
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
+def extract_next_url(sb):
+    """Robust helper function to find 'Next' chapter URL across different manga sites."""
+    sb.sleep(1.5)  # Wait for JS frameworks (React/Vue) to render navigation components
+    next_url = None
+    try:
+        elements = sb.find_elements("css selector", "a")
+        for el in elements:
+            try:
+                text = (el.text or "").strip().lower()
+                aria = (el.get_attribute("aria-label") or "").strip().lower()
+                cls = (el.get_attribute("class") or "").lower()
+                
+                if text == "next" or aria == "next" or "next_page" in cls or "next chapter" in text:
+                    # Respect VortexScans disabled "pointer-events-none" styling for end-of-series
+                    if "pointer-events-none" not in cls and "disabled" not in cls:
+                        href = el.get_attribute("href")
+                        if href and "http" in href:
+                            next_url = href
+                            break
+            except:
+                continue
+    except:
+        pass
+    return next_url
+
 def process_chapter(chapter_url):
     print(f"\n{'='*50}\n[STARTING] {chapter_url}\n{'='*50}")
     url_parts =[p for p in chapter_url.split('/') if p]
@@ -100,22 +125,7 @@ def process_chapter(chapter_url):
             sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
             try: sb.uc_gui_click_captcha()
             except: pass
-            
-            try:
-                if sb.is_element_present("a.next_page"):
-                    next_btn = sb.find_element("css selector", "a.next_page")
-                    next_url = next_btn.get_attribute("href")
-                elif sb.is_element_present('a[aria-label="Next"]'):
-                    next_btn = sb.find_element("css selector", 'a[aria-label="Next"]')
-                    cls = next_btn.get_attribute("class") or ""
-                    if "pointer-events-none" in cls:
-                        next_url = None
-                    else:
-                        next_url = next_btn.get_attribute("href")
-                else: 
-                    next_url = None
-            except: 
-                next_url = None
+            next_url = extract_next_url(sb)
         return next_url, True  
 
     existing_chars_text = ""
@@ -130,7 +140,7 @@ def process_chapter(chapter_url):
         try: sb.uc_gui_click_captcha()
         except: pass
         
-        # Stop execution if chapter is locked under paywall
+        # Stop execution if chapter is locked under paywall (VortexScans Support)
         if sb.is_text_visible("Locked Chapter") or sb.is_text_visible("Please login to unlock chapters"):
             print(f"[{chap_num}] Chapter is locked. Stopping here.")
             return None, True
@@ -154,22 +164,7 @@ def process_chapter(chapter_url):
         for cookie in sb.driver.get_cookies():
             site_cookies[cookie['name']] = cookie['value']
             
-        # Support for both sites' next chapter logic including pointer-events handling
-        try:
-            if sb.is_element_present("a.next_page"):
-                next_btn = sb.find_element("css selector", "a.next_page")
-                next_url = next_btn.get_attribute("href")
-            elif sb.is_element_present('a[aria-label="Next"]'):
-                next_btn = sb.find_element("css selector", 'a[aria-label="Next"]')
-                cls = next_btn.get_attribute("class") or ""
-                if "pointer-events-none" in cls:
-                    next_url = None
-                else:
-                    next_url = next_btn.get_attribute("href")
-            else: 
-                next_url = None
-        except: 
-            next_url = None
+        next_url = extract_next_url(sb)
 
     print(f"[{chap_num}] Processing Strips...")
     parts, original_files, ai_heights =[], {}, {}
@@ -308,7 +303,6 @@ def process_chapter(chapter_url):
         aspect_ratio = crop.height / crop.width
         effect = block.get('effect', 'zoom_in').lower()
         
-        # FIX FOR FILE SIZE: Added '-crf 28' and changed to '-preset faster'. This shrinks file sizes by 80%+ while preserving quality.
         common_flags =["-c:v", "libx264", "-preset", "faster", "-crf", "28", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
         target_w = 1080 
@@ -334,12 +328,13 @@ def process_chapter(chapter_url):
             bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920 - s_w) // 2, (1080 - s_h) // 2))
             bg.save(f_path)
 
+            # Jitter Fix: Slightly expanded initial scale before zoompan + lower zoom intensity limits integer-rounding jitter
             if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=3840x2160,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
+                       "-vf", f"scale=4000x2250,zoompan=z='1.15-(0.15/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
             else:
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=3840x2160,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"scale=4000x2250,zoompan=z='1.00+(0.15/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
         return (cmd, v_out)
 
@@ -362,7 +357,7 @@ def process_chapter(chapter_url):
     return next_url, False
 
 def stitch_all_chapters():
-    print(f"\n{'='*50}\n[FINALIZING] Stitching Recap\n{'='*50}")
+    print(f"\n{'='*50}\n[FINALIZING] Stitching Recap (At 1.1x Speed)\n{'='*50}")
     chapters_dir = os.path.join(MANGA_NAME, "chapters")
     if not os.path.exists(chapters_dir): return
     valid_chaps =[]
@@ -376,16 +371,26 @@ def stitch_all_chapters():
     list_path = os.path.join(MANGA_NAME, "full_recap_list.txt")
     with open(list_path, "w") as f:
         for num, vp in valid_chaps: f.write(f"file '{os.path.abspath(vp).replace(chr(92), '/')}'\n")
+    
     final_recap_path = os.path.join("videos", f"{MANGA_NAME}_full_recap.mp4")
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c", "copy", final_recap_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    # Accelerated Final Recap: Applied Filter Complex for 1.1x Video and Audio 
+    subprocess.run([
+        "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
+        "-filter_complex", "[0:v]setpts=0.90909*PTS[v];[0:a]atempo=1.1[a]",
+        "-map", "[v]", "-map", "[a]",
+        "-c:v", "libx264", "-preset", "faster", "-crf", "28",
+        "-c:a", "aac", "-b:a", "128k",
+        final_recap_path
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
     if os.path.exists(list_path): os.remove(list_path)
 
 
-# ================= NEW: 1.5x SPEED SHORTS GENERATOR =================
+# ================= 1.5x SPEED SHORTS GENERATOR =================
 def create_shorts_teaser():
     print(f"\n{'='*50}\n[SHORT GENERATOR] Creating High-Speed YouTube Shorts Teaser\n{'='*50}")
     
-    # 1. We ONLY want Chapter 1 for the Short as requested. 
     chapters_dir = os.path.join(MANGA_NAME, "chapters")
     if not os.path.exists(chapters_dir): 
         print("No chapters found to create shorts.")
@@ -401,27 +406,23 @@ def create_shorts_teaser():
     valid_chaps.sort(key=lambda x: x[0])
     if not valid_chaps: return
     
-    # Extract just the very first chapter processed
     first_chap_video = valid_chaps[0][1] 
 
     shorts_dir = os.path.join(MANGA_NAME, "shorts_temp")
     os.makedirs(shorts_dir, exist_ok=True)
 
-    # 2. Generate CTA Audio (Call to Action)
     print("Generating Call-to-Action Audio...")
     teaser_audio_text = "Want to see what happens next? Watch the full recap on my channel!"
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
     try:
         samples, _ = kokoro.create(teaser_audio_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
     except:
-        # Fallback safeguard
         samples, _ = kokoro.create("Watch the full recap on my channel!", voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
 
     cta_audio_path = os.path.join(shorts_dir, "cta_audio.wav")
     sf.write(cta_audio_path, samples, 24000)
     cta_dur = len(samples) / 24000.0
 
-    # 3. Generate CTA Visuals (Black vertical background with text)
     print("Generating Call-to-Action Visuals...")
     cta_img_path = os.path.join(shorts_dir, "cta_img.jpg")
     img = Image.new('RGB', (1080, 1920), color=(15, 15, 15)) 
@@ -441,18 +442,11 @@ def create_shorts_teaser():
         "-pix_fmt", "yuv420p", "-t", str(cta_dur), cta_video_path
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # 4. Extract Chapter 1, Speed it up 1.5x, Format Vertical, Limit length to exactly fit under 60 seconds.
     print("Applying 1.5x Speed to Chapter 1 and formatting for Shorts...")
     hook_video_path = os.path.join(shorts_dir, "hook_video.mp4")
     
-    # Max duration for YouTube shorts is 60 seconds. 
-    # We subtract our CTA time, and leave a 1-second margin of error.
     max_hook_length = 59.0 - cta_dur 
 
-    # Advanced FFmpeg filter:
-    # 1. setpts=0.666667*PTS (Makes Video 1.25x faster)
-    # 2. scale & blur (Formats for 9:16 layout safely)
-    # 3. atempo=1.25 (Makes Audio 1.25x faster without destroying pitch)
     vf_string = "[0:v]setpts=0.666667*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.666667*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
     af_string = "[0:a]atempo=1.25[aout]"
     
@@ -460,13 +454,12 @@ def create_shorts_teaser():
         "ffmpeg", "-y", "-i", first_chap_video,
         "-filter_complex", f"{vf_string};{af_string}",
         "-map", "[vout]", "-map", "[aout]",
-        "-t", str(max_hook_length), # Force it under limits
-        "-c:v", "libx264", "-preset", "faster", "-crf", "28", # Keeping file sizes lean
+        "-t", str(max_hook_length), 
+        "-c:v", "libx264", "-preset", "faster", "-crf", "28", 
         "-c:a", "aac", "-b:a", "128k", "-pix_fmt", "yuv420p",
         hook_video_path
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # 5. Stitch Speed-up Hook + the CTA Teaser
     print("Stitching Short together...")
     list_path = os.path.join(shorts_dir, "list.txt")
     with open(list_path, "w") as f:
