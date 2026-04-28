@@ -100,10 +100,22 @@ def process_chapter(chapter_url):
             sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
             try: sb.uc_gui_click_captcha()
             except: pass
+            
             try:
-                next_btn = sb.find_element("css selector", "a.next_page")
-                next_url = next_btn.get_attribute("href")
-            except: next_url = None
+                if sb.is_element_present("a.next_page"):
+                    next_btn = sb.find_element("css selector", "a.next_page")
+                    next_url = next_btn.get_attribute("href")
+                elif sb.is_element_present('a[aria-label="Next"]'):
+                    next_btn = sb.find_element("css selector", 'a[aria-label="Next"]')
+                    cls = next_btn.get_attribute("class") or ""
+                    if "pointer-events-none" in cls:
+                        next_url = None
+                    else:
+                        next_url = next_btn.get_attribute("href")
+                else: 
+                    next_url = None
+            except: 
+                next_url = None
         return next_url, True  
 
     existing_chars_text = ""
@@ -117,19 +129,47 @@ def process_chapter(chapter_url):
         sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
         try: sb.uc_gui_click_captcha()
         except: pass
-        sb.wait_for_element(".wp-manga-chapter-img", timeout=15)
+        
+        # Stop execution if chapter is locked under paywall
+        if sb.is_text_visible("Locked Chapter") or sb.is_text_visible("Please login to unlock chapters"):
+            print(f"[{chap_num}] Chapter is locked. Stopping here.")
+            return None, True
+            
+        # Support for both sites' image selectors
+        if sb.is_element_present(".wp-manga-chapter-img"):
+            sb.wait_for_element(".wp-manga-chapter-img", timeout=15)
+            images = sb.find_elements("css selector", ".wp-manga-chapter-img")
+        elif sb.is_element_present("img[data-reader-page-image]"):
+            sb.wait_for_element("img[data-reader-page-image]", timeout=15)
+            images = sb.find_elements("css selector", "img[data-reader-page-image]")
+        else:
+            images =[]
+            
         sb.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(0.5) 
-        images = sb.find_elements("css selector", ".wp-manga-chapter-img")
+        
         for img in images:
             src = img.get_attribute("data-src") or img.get_attribute("src")
             if src and "http" in src: image_urls.append(src.strip())
         for cookie in sb.driver.get_cookies():
             site_cookies[cookie['name']] = cookie['value']
+            
+        # Support for both sites' next chapter logic including pointer-events handling
         try:
-            next_btn = sb.find_element("css selector", "a.next_page")
-            next_url = next_btn.get_attribute("href")
-        except: next_url = None
+            if sb.is_element_present("a.next_page"):
+                next_btn = sb.find_element("css selector", "a.next_page")
+                next_url = next_btn.get_attribute("href")
+            elif sb.is_element_present('a[aria-label="Next"]'):
+                next_btn = sb.find_element("css selector", 'a[aria-label="Next"]')
+                cls = next_btn.get_attribute("class") or ""
+                if "pointer-events-none" in cls:
+                    next_url = None
+                else:
+                    next_url = next_btn.get_attribute("href")
+            else: 
+                next_url = None
+        except: 
+            next_url = None
 
     print(f"[{chap_num}] Processing Strips...")
     parts, original_files, ai_heights =[], {}, {}
@@ -286,7 +326,7 @@ def process_chapter(chapter_url):
                        "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
             else:
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"crop=1920:1080:0:min(in_h-1080\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"crop=1920:1080:0:min(in_h-1080\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
         else:
             bg = crop.resize((1920, 1080)).filter(ImageFilter.GaussianBlur(40))
             scale_f = min(1920 / crop.width, 1080 / crop.height)
@@ -296,7 +336,7 @@ def process_chapter(chapter_url):
 
             if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=3840x2160,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"scale=3840x2160,zoompan=z='1.25-(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
             else:
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
                        "-vf", f"scale=3840x2160,zoompan=z='1.00+(0.25/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
