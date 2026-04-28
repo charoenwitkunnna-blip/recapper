@@ -20,7 +20,7 @@ from kokoro_onnx import Kokoro
 
 # ================= CONFIGURATION =================
 # Pull from environment variables passed by GitHub Actions
-START_URL = os.environ.get("START_URL", "https://manhuaus.com/manga/infinite-mage/chapter-1/").strip()
+START_URL = os.environ.get("START_URL", "https://vortexscans.org/series/the-saint-levels-up-through-necromancy/chapter-1").strip()
 VOICE_MODEL = "am_adam"  
 AUDIO_SPEED = 1.0    
 
@@ -38,7 +38,7 @@ url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
 # --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS = []
+GEMINI_API_KEYS =[]
 temp_keys =[]
 pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
@@ -74,43 +74,35 @@ font = ImageFont.truetype(font_path, 28)
 
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
 
-def extract_next_url(sb):
-    """Robust helper function to find 'Next' chapter URL (Handles Relative Links & React/Vue)."""
-    sb.sleep(1.5)  # Wait for JS frameworks (React/Vue) to render navigation components
+def extract_next_url(sb, retries=3):
+    """Bulletproof Python-side extraction with retries for late-rendering React DOMs."""
     current_url = sb.get_current_url()
     
-    # 1. Fast path: Direct explicit attributes
-    try:
-        for sel in["a.next_page", "a[aria-label='Next']", "a[aria-label='next']"]:
-            if sb.is_element_present(sel):
-                for el in sb.find_elements("css selector", sel):
-                    cls = (el.get_attribute("class") or "").lower()
-                    if "pointer-events-none" in cls or "disabled" in cls:
-                        continue
-                    href = el.get_attribute("href")
-                    if href and len(href) > 2 and "javascript" not in href:
-                        return urljoin(current_url, href) # Safely joins relative URLs like '/series/chapter-2'
-    except: pass
-    
-    # 2. Fallback path: Loop over all links and check text/labels
-    try:
-        elements = sb.find_elements("css selector", "a")
-        for el in elements:
-            try:
-                text = (el.text or "").strip().lower()
-                aria = (el.get_attribute("aria-label") or "").strip().lower()
-                cls = (el.get_attribute("class") or "").lower()
-                
-                if text == "next" or aria == "next" or "next_page" in cls or "next chapter" in text:
-                    if "pointer-events-none" not in cls and "disabled" not in cls:
-                        href = el.get_attribute("href")
+    for attempt in range(retries):
+        sb.sleep(2) # Allow framework rendering
+        try:
+            links = sb.find_elements("css selector", "a")
+            for link in links:
+                try:
+                    text = (link.text or "").strip().lower()
+                    aria = (link.get_attribute("aria-label") or "").strip().lower()
+                    cls = (link.get_attribute("class") or "").lower()
+                    classes = cls.split()
+                    
+                    if text == "next" or aria == "next" or "next_page" in classes or "next chapter" in text:
+                        
+                        # Strictly check for disabled buttons or "pointer-events-none" indicating end-of-series
+                        if "pointer-events-none" in classes or link.get_attribute("disabled"):
+                            continue
+                            
+                        href = link.get_attribute("href")
                         if href and len(href) > 2 and "javascript" not in href:
                             return urljoin(current_url, href)
-            except:
-                continue
-    except:
-        pass
-        
+                except:
+                    continue
+        except:
+            pass
+            
     return None
 
 def process_chapter(chapter_url):
@@ -140,7 +132,20 @@ def process_chapter(chapter_url):
             sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
             try: sb.uc_gui_click_captcha()
             except: pass
+            
+            # Robust check for paywalls
+            try:
+                page_text = sb.get_text("body").lower()
+                if "locked chapter" in page_text or "login to unlock" in page_text:
+                    print(f"[{chap_num}] Chapter is locked (Paywall detected). Stopping here.")
+                    return None, True
+            except: pass
+            
             next_url = extract_next_url(sb)
+            
+            if next_url: print(f"[{chap_num}] Next Chapter Found: {next_url}")
+            else: print(f"[{chap_num}] Reached end of series or paywall.")
+                
         return next_url, True  
 
     existing_chars_text = ""
@@ -155,10 +160,13 @@ def process_chapter(chapter_url):
         try: sb.uc_gui_click_captcha()
         except: pass
         
-        # Stop execution if chapter is locked under paywall (VortexScans Support)
-        if sb.is_text_visible("Locked Chapter") or sb.is_text_visible("Please login to unlock chapters"):
-            print(f"[{chap_num}] Chapter is locked. Stopping here.")
-            return None, True
+        # Robust check for paywalls
+        try:
+            page_text = sb.get_text("body").lower()
+            if "locked chapter" in page_text or "login to unlock" in page_text:
+                print(f"[{chap_num}] Chapter is locked (Paywall detected). Stopping here.")
+                return None, True
+        except: pass
             
         # Support for both sites' image selectors
         if sb.is_element_present(".wp-manga-chapter-img"):
@@ -180,6 +188,8 @@ def process_chapter(chapter_url):
             site_cookies[cookie['name']] = cookie['value']
             
         next_url = extract_next_url(sb)
+        if next_url: print(f"[{chap_num}] Next Chapter Found: {next_url}")
+        else: print(f"[{chap_num}] Reached end of series or paywall.")
 
     print(f"[{chap_num}] Processing Strips...")
     parts, original_files, ai_heights =[], {}, {}
@@ -498,10 +508,13 @@ if not os.path.exists("voices-v1.0.bin"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin", "voices-v1.0.bin")
 
 current_target, processed = START_URL, 0
+
 while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
     try:
         current_target, skipped = process_chapter(current_target)
-        if not skipped: processed += 1
+        if not skipped: 
+            processed += 1
+            print(f"Processed: {processed}/{MAX_CHAPTERS_TO_PROCESS} Chapters.")
     except Exception as e:
         print(f"Error: {e}"); break
 
