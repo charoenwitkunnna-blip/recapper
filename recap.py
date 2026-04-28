@@ -171,6 +171,7 @@ def process_chapter(chapter_url):
         "- Hook the viewer immediately.\n"
         "- Use dramatic pacing, active voice, and high-energy storytelling.\n"
         "- Describe character actions, emotions, and plot twists dynamically.\n\n"
+        "- DO NOT skip any details try not to leave out any details be percise.\n\n"
         "TTS AUDIO COMPATIBILITY RULES (CRITICAL):\n"
         "- The 'narration' text MUST be a single continuous string. DO NOT use line breaks (\\n).\n"
         "- DO NOT use ellipses (...). Use a single period instead.\n"
