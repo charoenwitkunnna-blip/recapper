@@ -8,3 +8,128 @@ Role: A 9-star Hunter and the incarnation of Odin who leads the Romanov family.
 Appearance: An elderly man with long flowing white hair and a thick beard. He wears a distinctive red hooded cloak over white robes and his eyes glow with blue celestial light.
 Personality: Arrogant, elitist, and completely devoted to the power of the constellations.
 --------------------
+Name: Cronus
+Role: The deposed King of the Titans and God of Harvest and Time who becomes the protagonist's Guardian Star.
+Appearance: A massive deity with a thick white beard, long flowing hair, and eyes that glow with celestial light. He later manifests as a small chibi spirit with the same features.
+Personality: Proud, short-tempered, and deeply vengeful against the gods of Olympus who betrayed him.
+--------------------
+Name: The Party Leader
+Role: A rookie hunter leading a small party in the Ancient Garden gate.
+Appearance: A muscular man with short brown hair wearing heavy green and silver plate armor and carrying a massive shield.
+Personality: Social and helpful but underestimated by Ryoga.
+--------------------
+Name: The Female Archer
+Role: A member of the rookie hunter party.
+Appearance: A young woman with short dark hair wearing a white and teal tunic with leather archery gear.
+Personality: Observant and skeptical of solo hunters.
+--------------------
+Name: Haibara
+Role: A rookie hunter and member of the party led by Yuma.
+Appearance: A young man with light ash-colored hair wearing dark green and brown leather hunter gear.
+Personality: Nervous and easily intimidated by Ryoga's overwhelming power and dark summoning abilities.
+--------------------
+Name: The Goblin Shaman
+Role: The boss of the southern region within the gate.
+Appearance: A small green-skinned goblin wearing a red headband and a purple cape who carries a staff topped with a human skull.
+Personality: Arrogant and prone to anger who views humans as foolish prey.
+--------------------
+Name: The Dragonian
+Role: A powerful boss monster guarding the Ancient Proving Grounds.
+Appearance: A massive humanoid lizard with thick grey scales, large black claws, and glowing blue eyes. He possesses a powerful muscular build and wears no armor.
+Personality: A ferocious and territorial beast that views all intruders as prey.
+--------------------
+Name: Renya Shinya
+Role: A legendary alchemist who developed the first mass-produced mid-tier health potion in Ryoga's previous life.
+Appearance: A young man with messy blonde hair tied back in a low ponytail wearing glasses and a long white lab coat over a blue button-down shirt.
+Personality: Socially awkward and completely obsessed with his research but easily swayed by superior alchemical knowledge.
+--------------------
+Name: The 2-Star Orc
+Role: A powerful monster encountered near the gate boundary that serves as Ryoga first test for his new bone magic.
+Appearance: A massive and muscular humanoid with greyish-green skin, large tusks, and glowing white eyes wearing simple loincloth armor.
+Personality: Aggressive and savage, it attacks any human it encounters with lethal intent.
+--------------------
+Name: The Orc Settlement Chief
+Role: The powerful boss of the Orc Settlement who guards the inner sanctum.
+Appearance: A gargantuan orc with bulging muscles, tusks, and red glowing eyes. He carries a massive battle axe and wears simple tribal leather armor.
+Personality: Brutal, aggressive, and capable of entering a berserk rage when pushed to his limits.
+--------------------
+Name: Kashiwagi Sorakuu
+Role: A deceased hero and legendary Magic Fighter from the past whom Ryoga seeks to recruit.
+Appearance: A massive, shadowy, spectral figure with glowing red eyes and wisps of dark energy radiating from his body. He appears as a dark silhouette of a powerful warrior.
+Personality: Angry, vengeful, and burdened by the weight of a betrayal that cost him his life and legacy.
+--------------------
+Name: Hakugo Naruhito
+Role: The sub-master of the Aragiri Guild who betrayed Kashiwagi thirty-five years ago.
+Appearance: A man with short dark hair wearing sunglasses and a military-style jacket, seen shouting into a radio during a historical disaster.
+Personality: Cowardly, manipulative, and a glory-seeker who values his own survival over the lives of his comrades.
+--------------------
+Name: Fafnir
+Role: The new undead vessel for the soul of Sora Kashiwagi.
+Appearance: A powerful dragon-man with brown scales, horns, a muscular build, and a loincloth. He possesses sharp claws and glowing blue eyes.
+Personality: Proud and argumentative about his dignity but ultimately loyal to the contract.
+--------------------
+Name: Skeleton Guard
+Role: A specialized defensive undead created from an orc corpse.
+Appearance: A tall humanoid skeleton equipped with two massive white shields on its arms.
+Personality: Mindless and obedient to Ryogas commands.
+--------------------
+Name: Satake Shigeru
+Role: A hunter from the Aragiri Guild and a former bully from Ryogas orphanage.
+Appearance: A tall and muscular man with short blonde hair and freckles on his face. He wears a blue tight-fitting t-shirt and grey cargo pants with bandages on his forearms.
+Personality: Arrogant, vengeful, and prone to underestimating others based on their past status.
+--------------------
+Name: Rago Jomon
+Role: The Captain of the Aragiri Guilds 7th Attack Squad.
+Appearance: A young man with short brown hair and a calm expression. He wears a grey button-down shirt over a dark undershirt.
+Personality: Composed, authoritative, and observant of potential talent.
+--------------------
+Name: The British Spear Saint
+Role: A legendary warrior from the future who developed the Death Spiral spear technique based on basic Verdian spearmanship.
+Appearance: A refined man with short blonde hair tied in a low ponytail wearing a professional charcoal business suit with a white shirt and a dark tie.
+Personality: Confident and professional who serves as an idealized mentor figure in Ryogas memories of the future.
+--------------------
+Name: Asaka Mirei
+Role: The future Sword Saint of the Phoenix Guild who originally cleared the Forgotten Temple gate in the previous timeline.
+Appearance: A young woman with long black hair tied in a high ponytail. She wears black and grey heavy plate armor over white pants and carries a longsword at her hip.
+Personality: A tragic genius known for her overwhelming talent who eventually lost everything in a raid accident.
+--------------------
+Name: Gouda Gaishin
+Role: A powerhouse from the Daybreak Guild known in the future by the alias Iron Fist.
+Appearance: A tall and extremely muscular man with brown hair tied in a short ponytail and a scar over his right eye. He wears a white martial arts gi with a black belt and has bandages wrapped around his hands and forearms.
+Personality: Confident and intense who is recognized as one of the representative powerhouses of Japan.
+--------------------
+Name: The Interviewer
+Role: A media personality who interviews top-tier hunters about their strategies.
+Appearance: A professional woman with brown hair, wearing a white blouse and a yellow scarf.
+Personality: Professional, inquisitive, and social.
+--------------------
+Name: Fallen Cultists
+Role: The primary undead enemies found within the Forgotten Temple.
+Appearance: Skeletal monsters wearing grey and white robes with red glowing eyes and demonic markings on their skin.
+Personality: Mindless, aggressive, and relentless in their pursuit of intruders.
+--------------------
+Name: The Demon Eye
+Role: A guardian monster within the Forgotten Temple that attacks intruders with powerful energy beams.
+Appearance: A massive floating eyeball monster with numerous thick dark tentacles or tendrils trailing behind it. It has a jagged, fleshy texture and a large red iris.
+Personality: Mindless and highly aggressive, it exists only to destroy those who enter its domain.
+--------------------
+Name: The Masked Mimic
+Role: A deceptive monster in the temple that uses status-debuffing curses on its enemies.
+Appearance: A slender, pitch-black humanoid creature with elongated limbs. It wears a white circular mask with a simple, creepy smiley face.
+Personality: Cunning and eerie, it relies on weakening its prey before attacking.
+--------------------
+Name: The Dungeon Analyst
+Role: An expert seen in a briefing or memory explaining the complex clear conditions of the Forgotten Temple.
+Appearance: A professional woman with long dark hair tied back in a high ponytail. She wears a white lab coat over a light-colored top.
+Personality: Serious, analytical, and highly knowledgeable about gate mechanics.
+--------------------
+Name: The Phoenix Scout
+Role: A subordinate of Asaka Mirei who observes the efficiency of other hunter parties.
+Appearance: A young man with short brown hair wearing standard leather and plate armor of the Phoenix Guild.
+Personality: Practical and easily impressed by overwhelming talent.
+--------------------
+Name: Armored Zombie
+Role: An elite undead guardian encountered within the inner chambers of the Forgotten Temple.
+Appearance: A tall skeletal monster wearing white robes and heavy green armor plates with a skull-like mask and horns.
+Personality: A mindless and aggressive killing machine that serves as a high-level obstacle for hunters.
+--------------------
