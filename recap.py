@@ -22,7 +22,7 @@ from kokoro_onnx import Kokoro
 # Pull from environment variables passed by GitHub Actions
 START_URL = os.environ.get("START_URL", "https://vortexscans.org/series/the-saint-levels-up-through-necromancy/chapter-1").strip()
 VOICE_MODEL = "am_adam"  
-AUDIO_SPEED = 1.0    
+AUDIO_SPEED = 1.1    # Natively render audio/video at 1.1x so we don't have to re-encode during the final stitch!
 
 # Handle "all" or specific number of chapters
 max_chap_env = os.environ.get("MAX_CHAPTERS", "1").strip().lower()
@@ -122,6 +122,7 @@ def process_chapter(chapter_url):
         os.makedirs(d, exist_ok=True)
 
     char_file = os.path.join(cast_dir, "characters.txt")
+    context_file = os.path.join(cast_dir, "last_chapter_context.txt")
     highest_file = os.path.join(chapters_dir, "highest.txt")
     final_path = os.path.join(current_chap_dir, "video.mp4")
 
@@ -148,10 +149,17 @@ def process_chapter(chapter_url):
                 
         return next_url, True  
 
+    # Load Existing Character Lore
     existing_chars_text = ""
     if os.path.exists(char_file):
         with open(char_file, "r", encoding="utf-8") as f:
             existing_chars_text = f.read()
+            
+    # Load Previous Chapter Context
+    previous_context = ""
+    if os.path.exists(context_file):
+        with open(context_file, "r", encoding="utf-8") as f:
+            previous_context = f.read()
 
     print(f"[{chap_num}] Scraping Images...")
     image_urls, site_cookies, next_url =[], {}, None
@@ -227,16 +235,17 @@ def process_chapter(chapter_url):
         "Act as a professional Manhwa recap scriptwriter. Follow strict high-energy rules for YouTube/TikTok.\n\n"
         "CRITICAL INSTRUCTION: DO NOT output markdown blocks (like ```json). Return pure JSON format ONLY.\n\n"
         f"EXISTING CHARACTER LORE DATABASE:\n{existing_chars_text if existing_chars_text else 'None yet.'}\n\n"
+        f"PREVIOUS CHAPTER NARRATION (For story continuity):\n{previous_context if previous_context else 'None (This is the first chapter).'}\n\n"
         "NARRATION RULES:\n"
         "- Hook the viewer immediately.\n"
         "- Use dramatic pacing, active voice, and high-energy storytelling.\n"
-        "- Describe character actions, emotions, and plot twists dynamically.\n\n"
+        "- Describe character actions, emotions, and plot twists dynamically.\n"
         "- DO NOT skip any details try not to leave out any details be percise.\n\n"
         "TTS AUDIO COMPATIBILITY RULES (CRITICAL):\n"
         "- The 'narration' text MUST be a single continuous string. DO NOT use line breaks (\\n).\n"
         "- DO NOT use ellipses (...). Use a single period instead.\n"
         "- DO NOT use multiple punctuation marks together (no !!, ??, or ?!). Use only one.\n"
-        "- DO NOT use asterisks, brackets, or parentheses for actions (no *gasps* or[sighs]).\n"
+        "- DO NOT use asterisks, brackets, or parentheses for actions (no *gasps* or [sighs]).\n"
         "- DO NOT use quotation marks (\", \') or em-dashes (—). Keep it entirely plain text.\n\n"
         "CAMERA & MARKER RULES:\n"
         "- Look at the images provided. There are yellow numbers acting as markers along the left edge.\n"
@@ -285,10 +294,17 @@ def process_chapter(chapter_url):
 
     if not script_data: return next_url, False
 
+    # Save new characters
     if script_data.get('new_characters'):
         with open(char_file, "a", encoding="utf-8") as f:
             for c in script_data['new_characters']:
                 f.write(f"Name: {c.get('name')}\nRole: {c.get('role')}\nAppearance: {c.get('appearance')}\nPersonality: {c.get('personality')}\n{'-'*20}\n")
+                
+    # Save the current chapter's narration to act as context for the next chapter
+    if script_data.get('panels'):
+        full_narration = " ".join([p.get('narration', '') for p in script_data['panels']])
+        with open(context_file, "w", encoding="utf-8") as f:
+            f.write(full_narration)
 
     print(f"[{chap_num}] Preparing Audio & Assets Concurrently...")
     kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
@@ -382,7 +398,7 @@ def process_chapter(chapter_url):
     return next_url, False
 
 def stitch_all_chapters():
-    print(f"\n{'='*50}\n[FINALIZING] Stitching Recap (At 1.1x Speed)\n{'='*50}")
+    print(f"\n{'='*50}\n[FINALIZING] Stitching Recap (Fast Copy)\n{'='*50}")
     chapters_dir = os.path.join(MANGA_NAME, "chapters")
     if not os.path.exists(chapters_dir): return
     valid_chaps =[]
@@ -399,13 +415,10 @@ def stitch_all_chapters():
     
     final_recap_path = os.path.join("videos", f"{MANGA_NAME}_full_recap.mp4")
     
-    # Accelerated Final Recap: Applied Filter Complex for 1.1x Video and Audio 
+    # Fast Stitching - Because clips are natively 1.1x speed via Kokoro, we can instantly copy them!
     subprocess.run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
-        "-filter_complex", "[0:v]setpts=0.90909*PTS[v];[0:a]atempo=1.1[a]",
-        "-map", "[v]", "-map", "[a]",
-        "-c:v", "libx264", "-preset", "faster", "-crf", "28",
-        "-c:a", "aac", "-b:a", "128k",
+        "-c:v", "copy", "-c:a", "copy",
         final_recap_path
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
@@ -467,12 +480,14 @@ def create_shorts_teaser():
         "-pix_fmt", "yuv420p", "-t", str(cta_dur), cta_video_path
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    print("Applying 1.5x Speed to Chapter 1 and formatting for Shorts...")
+    print("Applying Speed to Chapter 1 and formatting for Shorts...")
     hook_video_path = os.path.join(shorts_dir, "hook_video.mp4")
     
     max_hook_length = 59.0 - cta_dur 
 
-    vf_string = "[0:v]setpts=0.666667*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.666667*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
+    # Because base video is natively 1.1x speed, we apply a 1.25x speedup modifier to reach ~1.375x fast pacing.
+    # setpts=0.8*PTS handles the video speed. atempo=1.25 handles audio speed. They stay perfectly synced!
+    vf_string = "[0:v]setpts=0.8*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.8*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
     af_string = "[0:a]atempo=1.25[aout]"
     
     subprocess.run([
