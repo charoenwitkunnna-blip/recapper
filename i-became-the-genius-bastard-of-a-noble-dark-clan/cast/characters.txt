@@ -1,0 +1,365 @@
+Name: Evan
+Role: The protagonist who was a hero of the light party before regressing.
+Appearance: Light brown hair with average build wearing simple adventurer gear in the prologue.
+Personality: Determined and humble but carries heavy guilt for failing to save the world.
+--------------------
+Name: Christian Van Baron Kazarte
+Role: The body Evan regresses into who was originally known as a notorious scumbag.
+Appearance: Handsome young man with black hair and striking red eyes dressed in expensive noble clothing.
+Personality: Arrogant and troublesome in the past but now possesses Evans resolve.
+--------------------
+Name: Count Kazarte
+Role: The head of the Kazarte family and Christians stern father.
+Appearance: A tall and intimidating demon noble with slicked back dark hair and sharp red eyes.
+Personality: Cold and values honor above all else to the point of executing his own son.
+--------------------
+Name: Demon King of Evil Blood
+Role: The ultimate antagonist who triggered the end of the world.
+Appearance: A massive and terrifying figure clad in red and black armor with glowing eyes and large horns.
+Personality: Ruthless and destructive seeking to sacrifice all of humanity.
+--------------------
+Name: Cox
+Role: The loyal butler of the Count Khazar household who serves the young master Christian.
+Appearance: A middle aged butler with light brown hair and long pointed ears wearing a formal tuxedo with a red waistcoat.
+Personality: Nervous and dutiful. He seems to pity Christian but follows orders without question.
+--------------------
+Name: Tern Van Baron Khazar
+Role: Christians younger brother who despises him for ruining the family reputation.
+Appearance: A young man with neat dark hair and sharp red eyes wearing an ornate grey and teal military style noble outfit.
+Personality: Arrogant and self righteous. He views himself as the true successor and has zero tolerance for Christians failures.
+--------------------
+Name: Vice Commander Melin
+Role: The Vice Commander of the Black Swamp Knights and guardian of the family archives.
+Appearance: A tall man with long flowing orange brown hair wearing an ornate black and gold military uniform with high shoulder pauldrons.
+Personality: Stoic and meritocratic. He values actual strength and discipline over noble status.
+--------------------
+Name: Marie
+Role: Christians personal maid who was assigned to him because no human servant could tolerate his previous behavior.
+Appearance: A high ranking evil spirit banshee with long wavy teal hair and pale skin wearing a classic maid outfit with blue spiritual energy swirling around her.
+Personality: Slightly eerie and blunt with a dark sense of humor often suggesting human blood as a refreshment.
+--------------------
+Name: Thorn
+Role: A veteran knight who steps up to challenge Christians arrogance.
+Appearance: A powerful knight with greyish skin and short dark hair wearing the formal grey and white uniform of the Black Swamp Knights.
+Personality: Proud and easily provoked by insults to his comrades honor.
+--------------------
+Name: Librarian Maid
+Role: The guardian and librarian of the Kazarte family archives.
+Appearance: A young woman with wavy light brown hair and blue eyes wearing a white and black maid outfit with a gentle, teasing smile.
+Personality: Playful, mischievous, and enjoys teasing others, especially the young master.
+--------------------
+Name: Old Valet
+Role: A minor household servant who becomes the target of Christians fake temper tantrums.
+Appearance: An elderly demon servant with grey hair and a thick mustache wearing a traditional butler suit with a white shirt and black tie.
+Personality: Extremely nervous and easily rattled by the young masters aggressive behavior.
+--------------------
+Name: Christians Scum Friends
+Role: The lowlife associates from Christians past who are being used as part of the butlers scheme.
+Appearance: A group consisting of a thin man with sharp features and a wealthy looking but gaudy woman with a heavy build and bright red clothing.
+Personality: Parasitic and untrustworthy individuals who only care about money and status.
+--------------------
+Name: Ashid De Baron
+Role: The Second Prince of the Dark Magic Clan and the true mastermind behind the attempts on Christians life.
+Appearance: A silhouette of a man with short hair wearing a red and black noble cape with gold insignia.
+Personality: Manipulative and ambitious, willing to use household servants to destroy his rivals from the shadows.
+--------------------
+Name: Goblin Servant
+Role: A minor household worker who gossips about the young masters progress.
+Appearance: A green-skinned demon servant wearing a formal red tie and dark vest.
+Personality: Observant and prone to exaggeration when discussing rumors.
+--------------------
+Name: Grantel
+Role: The head of the Grantel Trading Company and owner of the underground gambling hall.
+Appearance: A short and portly demon merchant with slicked back grey hair wearing an expensive purple and gold patterned robe.
+Personality: Greedy and shrewd but completely spineless when confronted by a superior power.
+--------------------
+Name: Meri
+Role: Commander of the Black Shadow Knights and Christians aunt.
+Appearance: A tall woman with long dark hair wearing a purple noble dress and a black lace veil over her eyes.
+Personality: Observant and slightly mocking with the aura of a true powerhouse.
+--------------------
+Name: Elder Noble
+Role: A high-ranking advisor or elder of the Kazarte family who evaluates Christians potential.
+Appearance: An older man with slicked back white hair and a matching white beard wearing an ornate grey and black robe.
+Personality: Wise and observant with a deep understanding of demonic power.
+--------------------
+Name: Head Chef Orc
+Role: The head of the Kazarte household kitchen staff.
+Appearance: A large green-skinned orc with a massive build wearing a white chef's hat and a white apron.
+Personality: A master of his craft who is highly disciplined but easily intimidated by the sudden presence of the young master in his kitchen.
+--------------------
+Name: First Princess Yulia
+Role: The first princess of the magic empire and a dangerous hidden player in the succession war.
+Appearance: A mysterious figure seen in silhouette surrounded by purple roses and pomegranates with long flowing hair.
+Personality: Described by Meri as the most dangerous individual despite her reputation as the gentlest member of the royal family.
+--------------------
+Name: Light Party Heroes
+Role: Evans former companions who were slaughtered by the demonic forces in his previous life.
+Appearance: A group from Evans past consisting of a blonde knight a blue haired mage and a fox girl with large ears.
+Personality: Heroic and loyal warriors who fought to save humanity but lacked the strength to overcome the demonic empire.
+--------------------
+Name: Roine De Baron
+Role: The direct descendant of the main house and the primary rival for the Holy Dark Ceremony.
+Appearance: A young man with wavy light blue and dark hair and piercing red eyes wearing a white and teal noble suit with a red jewel tie.
+Personality: Arrogant and highly competitive as the chosen star of the main family.
+--------------------
+Name: Simon
+Role: The Head Steward of the Dark Mage Clan and a direct subordinate of the Lord Patriarch.
+Appearance: A handsome man with vibrant slicked back red hair and pointed ears wearing a formal dark brown and white tuxedo with a high collar.
+Personality: Polite and loyal but possesses a mischievous and slightly sadistic side.
+--------------------
+Name: Alros
+Role: The third son of the Tyramin family and a rival during the Ebony Hunt.
+Appearance: A young man with messy blonde hair and sharp red eyes wearing a brown and green noble outfit with a fur collar.
+Personality: Arrogant, hot-headed, and easily baited into losing his temper by Christian's taunts.
+--------------------
+Name: Choco
+Role: A magical beast controlled by Alros through dark magic.
+Appearance: A massive leopard with dark purple fur covered in red spots and glowing red eyes.
+Personality: Feral and aggressive but completely submissive to the commands of its master.
+--------------------
+Name: Lena
+Role: A beast-kin used as a sacrificial catalyst for the darkness hunt.
+Appearance: A young fox girl with brown ears and a long bushy tail wearing a simple school uniform.
+Personality: Sorrowful and resigned to her fate as she waits for the ritual to begin.
+--------------------
+Name: Karazo
+Role: The ultimate target of the darkness hunt that Christian intends to capture.
+Appearance: A dark spiritual entity or beast that manifests when a creature is driven to absolute despair.
+Personality: A primal force of nature driven by pure terror and instinct.
+--------------------
+Name: Tyramin Wolf Hunter
+Role: A subordinate of Alros who helps lead the Ebony Hunt.
+Appearance: A young man with brown wolf ears and a tail wearing a simple tan and brown adventurer outfit with a sword at his waist.
+Personality: Short tempered and loyal to House Tyramin but easily annoyed by Christians laziness.
+--------------------
+Name: Tyramin Elf Mage
+Role: The primary spellcaster for Alros's hunting party responsible for defensive barriers.
+Appearance: A young elf with long light blue hair and pointed ears wearing dark grey and black robes with gold trim.
+Personality: Professional and focused but quickly becomes overwhelmed when the ritual goes out of control.
+--------------------
+Name: Mepina
+Role: The First Seat of the Seven Circles of Gehenna and a high-ranking observer in the demonic hierarchy.
+Appearance: A figure with flowing translucent blue hair and glowing purple eyes, often seen through ripples of water or magical energy.
+Personality: Calculating and deeply intrigued by anomalies, she possesses an aura of ancient power and calm fascination.
+--------------------
+Name: Demon of Gehenna
+Role: A high-ranked five-star demon acting as a field boss and obstacle for the hunters.
+Appearance: A massive grey-skinned demon with glowing blue eyes, orange horns, and red glowing tattoos covering his muscular upper body.
+Personality: Arrogant, sadistic, and manipulative, willing to offer false deals to those he deems inferior.
+--------------------
+Name: Count Tyramin
+Role: The Head of House Tyramin and father of Alros who oversees the branch family's territory.
+Appearance: A large, imposing man with wild blonde fur-like hair, a thick blonde beard, and red eyes wearing a blue and white tiger-patterned robe over his chest.
+Personality: Honorable and boisterous. He respects strength and is humble enough to admit when he is wrong.
+--------------------
+Name: Lady Idrine
+Role: A high ranking noblewoman and potential mastermind who is monitoring the events of the darkness hunt.
+Appearance: A stunning woman with long wavy reddish orange hair and piercing purple eyes wearing an elegant red and black noble dress.
+Personality: Calm, mysterious, and observant.
+--------------------
+Name: Lord Noga
+Role: The Patriarch of the main house and a high-ranking elder overseeing the succession ceremony.
+Appearance: An elderly demon noble with a white goatee and sharp red eyes wearing a formal dark suit with a red waistcoat.
+Personality: Authoritative, observant, and intrigued by those who defy expectations.
+--------------------
+Name: Main House Overseer
+Role: A high-ranking official of the main family who stands beside Lord Noga.
+Appearance: A serious woman with long dark hair and piercing red eyes wearing a high-collared dark robe with red trim.
+Personality: Cold, professional, and highly disciplined.
+--------------------
+Name: Jupien De Baron
+Role: The Second Princess of the Dark Magic Clan.
+Appearance: A young woman with short brown hair and sharp red eyes wearing a white and teal noble suit with a red jewel tie.
+Personality: Observant, composed, and carries herself with royal dignity.
+--------------------
+Name: Mysak De Baron
+Role: The Third Prince of the Dark Magic Clan.
+Appearance: A young man with short dark hair in a bowl cut and piercing red eyes wearing a high-collared dark military-style noble outfit.
+Personality: Quiet, serious, and highly disciplined.
+--------------------
+Name: Prur
+Role: A summoner serving Young Master Loin who challenges Christians presence at the ceremony.
+Appearance: A middle-aged man with slicked-back grey hair and a thin mustache wearing a black suit and a green patterned tie.
+Personality: Arrogant, condescending, and eager to insult those he deems inferior.
+--------------------
+Name: Sebastian
+Role: The assistant butler of the main estate and guide for the Sacred Darkness Ceremony.
+Appearance: A short goblin like demon with grey skin large ears and a white skullcap wearing a white and grey robe and carrying a green gem staff.
+Personality: Polite and formal but clearly enjoys testing the physical limits of the young masters.
+--------------------
+Name: Lihue
+Role: The Overseer of the Holy Place where the darkness ritual is conducted.
+Appearance: A woman with messy shoulder length light blue hair and heavy dark circles under her eyes wearing a professional grey suit and white cravat.
+Personality: Eerie and mysterious with a tired but authoritative presence.
+--------------------
+Name: Anmyeol
+Role: The legendary progenitor of the dark mages and a former third ranked demon lord.
+Appearance: A massive and imposing figure wearing dark ornate armor with a spiked crown and red feathered pauldrons holding a glowing purple blade.
+Personality: A legendary figure who represents the peak of dark magic power whose name still commands respect across the demon realm.
+--------------------
+Name: Langham de Barron
+Role: Acting Head of the Dark Mage Clan and a primary political player in the succession war.
+Appearance: A middle aged man with slicked back dark hair a thick mustache and glasses wearing a high collared grey and black noble suit with a large jeweled brooch.
+Personality: Cold calculating and ruthless. He views people as tools or obstacles and has no patience for those who disrupt his plans.
+--------------------
+Name: Macfield
+Role: A high ranking official or retainer who serves as an informant and enforcer for Langham.
+Appearance: A man with wavy brown hair a small scar on his left cheek and green eyes wearing a teal and white military style noble uniform with silver buttons.
+Personality: Serious and observant. He is a professional who reports findings without bias though he is clearly wary of the power dynamics within the family.
+--------------------
+Name: Healer Elf
+Role: The medical specialist tasked with evaluating Christians condition after his return.
+Appearance: A young elf with grey skin short white hair and pointed ears wearing white and blue clerical robes with gold embroidery.
+Personality: Professional and focused. He provides clinical assessments based on magical readings regardless of the patients reputation.
+--------------------
+Name: Rania
+Role: A former companion of Evan from the Light Party heroes.
+Appearance: A young beast-kin girl with brown fox ears and matching hair wearing a yellow and white school-style uniform.
+Personality: Tsundere and deeply caring despite her aggressive way of speaking. She worries immensely for her comrades.
+--------------------
+Name: The Child Master
+Role: The secret teacher Aunt Meri introduces to Christian for his special training.
+Appearance: A small child with short silver hair and sharp red eyes wearing a dark cloak with a teal interior.
+Personality: Stoic and intimidating. Despite their small stature, they possess a terrifying aura that even high-ranking nobles fear.
+--------------------
+Name: Nordian
+Role: The last 8-star powerhouse of the Dark Mage Clan whose death led to the family's decline and servitude.
+Appearance: A legendary figure whose specific features are not shown but is known as the last great pillar of the clan.
+Personality: Not described, but he represented the peak of the clan's former glory and strength.
+--------------------
+Name: Lady Marisa
+Role: The daughter of the Ultimate Poison Dark Magic family and Christians ex-fiance.
+Appearance: A young noblewoman with long wavy purple hair and bright blue eyes wearing a luxurious light blue and gold gown with a large brown bow.
+Personality: Aggressive and prideful with a deep-seated hatred for Christians past behavior.
+--------------------
+Name: Marisas Guardian
+Role: The personal protector and companion of Lady Marisa.
+Appearance: A serious man with slicked back green hair wearing a tan and grey traveling robe with black gloves.
+Personality: Stoic and protective of his charge and treats Christian like garbage.
+--------------------
+Name: Cellar Servant
+Role: A household servant who provides information to Christian about the visiting nobles.
+Appearance: A short elderly servant with white hair and a green cap carrying a bottle of wine.
+Personality: Helpful and somewhat nervous around the young master.
+--------------------
+Name: Ancient Fox Spirit
+Role: A knowledgeable familiar that reveals secret history to Christian.
+Appearance: A small brown fox with multiple fluffy tails and sharp intelligent eyes.
+Personality: Prideful and demanding but helpful in exchange for physical affection like head pats.
+--------------------
+Name: Dark Auction Hostess
+Role: The master of ceremonies for the underground relic market.
+Appearance: An elegant elf woman with pinkish hair tied in a bun wearing a formal grey vest over a white shirt and black trousers.
+Personality: Charismatic and professional with a flair for dramatic presentations.
+--------------------
+Name: Shadowy Noble
+Role: A mysterious high ranking individual Christian is traveling to meet.
+Appearance: A refined figure with long dark hair and glasses sitting in a luxury room while holding a glass of wine.
+Personality: Sophisticated and composed with an aura of immense wealth and power.
+--------------------
+Name: Ruvid
+Role: The Branch Manager of the auction house and a high ranking member of the Rudolph Merchant Group.
+Appearance: A young man with slicked back dark hair and glasses wearing a high collared blue and black noble robe with gold patterns.
+Personality: Professional and composed on the surface but hiding a deep secret about his true identity.
+--------------------
+Name: Ruina
+Role: The true owner of the Deer Merchant Group who uses a magical artifact to disguise herself as Ruvid.
+Appearance: A beautiful woman with long dark hair and piercing blue eyes wearing glasses and an elegant blue lace shawl over a dark dress.
+Personality: Calculating and prideful. She is easily flustered when her secret identity is exposed by someone she considers a brat.
+--------------------
+Name: Elra
+Role: The 26th Head of the Renowned Medical Clan and a tragic figure from Evans past life.
+Appearance: A woman with long light grey hair and striking blue eyes wearing a traditional light blue and white medical robe.
+Personality: Stoic, disciplined, and deeply compassionate despite the immense suffering she endured.
+--------------------
+Name: Saint of the Battlefield
+Role: Elras disciple and the man who would eventually become the legendary healer of the first war.
+Appearance: A man with short brown hair wearing simple brown and white traveling robes and a wide-brimmed straw hat.
+Personality: Dedicated and humble, he carries the weight of his masters legacy with absolute resolve.
+--------------------
+Name: Marquis
+Role: A high-ranking noble and father figure who is monitoring the movements of the young masters.
+Appearance: A tall man with slicked back black hair featuring a distinctive white streak and sharp red eyes dressed in a black high-collared suit.
+Personality: Calculating and authoritative with a subtle pride in his sons potential.
+--------------------
+Name: Vier
+Role: A direct descendant of the Ultimate Poison Dark Magic family.
+Appearance: A young noble with messy dark blue hair and a black eye mask wearing an ornate teal and gold cloak.
+Personality: Arrogant, impatient, and looks down on everyone including his own family members.
+--------------------
+Name: Ghost Monkeys
+Role: Natural obstacles used by Christian as a tactical distraction.
+Appearance: Small primate demonic beasts with glowing blue skin and bright purple eyes that live in the deep forests.
+Personality: Feral and aggressive toward anything that disturbs their territory.
+--------------------
+Name: Masked Assassin
+Role: A high ranking five star dark mage acting as an enforcer for a secret mastermind.
+Appearance: A woman with long reddish brown hair wearing a dark hooded cloak and a white masquerade style mask with green glowing claws on her hands.
+Personality: Sadistic, efficient, and arrogant, enjoying the suffering of those trapped in her poison.
+--------------------
+Name: Mysterious Hunter
+Role: A mysterious wanderer who discovers Marisa tied up in the forest.
+Appearance: A man with messy long brown hair and intense blue eyes wearing a tattered brown traveling cloak and dark gloves.
+Personality: Playful, mocking, and curious about the high ranking noble families.
+--------------------
+Name: Shadow Leader
+Role: The mysterious leader of the assassination squad who was hiding in the shadows.
+Appearance: A massive figure wearing a heavy grey hooded cloak and a full black mask that hides all features except for glowing red eyes.
+Personality: Silent and intimidating with a presence that suggests overwhelming power.
+--------------------
+Name: Eshud De Baron
+Role: The brother of Christian and a high-ranking member of the Dark Magic Clan who orchestrated the assassination attempt.
+Appearance: A handsome young man with messy black hair, piercing red eyes, and a notable scar across his left eye and cheek. He wears a grey traveling cloak over a formal dark suit.
+Personality: Arrogant, manipulative, and deeply insecure about his status. He is willing to sacrifice family members to secure his path to becoming a Duke.
+--------------------
+Name: Maisak
+Role: The youngest daughter of the Marquess and a competitor for the succession.
+Appearance: A young woman with short dark hair and sharp red eyes wearing a high-collared dark military style outfit.
+Personality: Known as the Young Lady of Mad Explosion, suggesting a volatile and aggressive nature.
+--------------------
+Name: Serad
+Role: The First Young Lord of Berserker and a high-ranking rival in the family hierarchy.
+Appearance: A tall man with long, flowing dark hair and a cold expression.
+Personality: Stoic and formidable, carrying the weight of the Berserker title.
+--------------------
+Name: Duke Huam
+Role: The Patriarch of the Ultimate Poison Dark Magic family and an 8-star Demon Lord.
+Appearance: A handsome man with slicked back dark blue hair and piercing blue eyes wearing an ornate teal and gold military-style noble uniform.
+Personality: A doting and protective father to Marisa but an intimidating and ruthless powerhouse to everyone else.
+--------------------
+Name: Marchioness Fresia
+Role: A high-ranking noble and rival who views Christian with extreme prejudice.
+Appearance: A stunning woman known as the Crimson Snow Flower with long red hair in a high ponytail and sharp red eyes wearing an elegant purple and black gown.
+Personality: Ambitious, hot-headed, and vengeful. She is deeply insulted by Christian's rising status and success.
+--------------------
+Name: Fiendish Dragon
+Role: A lethal surprise attack sent by the House of Necromancy to disrupt the inauguration.
+Appearance: A massive grey-skinned dragon with glowing red eyes, sharp fangs, and powerful wings.
+Personality: A feral and destructive beast driven by pure aggression and dark magic.
+--------------------
+Name: Cason Tiramin
+Role: The eldest son of Count Tiramin and Alros's older brother.
+Appearance: A tall young man with short spiky brown hair and sharp red eyes wearing a high-collared grey and white patterned noble suit with a dark bowtie.
+Personality: Diplomatic, calculating, and strategically humble when dealing with potential powerhouses like Christian.
+--------------------
+Name: Julian De Baron
+Role: A high-ranking successor of the House of Darkness and a lethal dark mage.
+Appearance: A beautiful woman with long flowing light blue hair and piercing red eyes wearing a white gown with a butterfly motif and glowing magical jewelry.
+Personality: Ruthless, arrogant, and easily bored. She views most people as pathetic and only cares about those who show true strength.
+--------------------
+Name: Red Haired Messenger
+Role: A servant of the main house tasked with delivering messages and gifts between the successors and the Patriarch.
+Appearance: A young demon man with messy vibrant red hair and a wide fanged grin wearing a dark tuxedo and holding a gift box.
+Personality: Enthusiastic and slightly mischievous. He seems to enjoy the chaos of the succession struggle.
+--------------------
+Name: First Young Lady Yurian
+Role: The youngest daughter of Marquis Langham and a potential rival successor whose power is suspicious.
+Appearance: A beautiful noblewoman with long wavy dark hair and piercing red eyes wearing an elegant purple and grey dress with floral patterns.
+Personality: Currently known for her warm and kind disposition but was previously infamous for being an arrogant and cruel individual.
+--------------------
+Name: Specter Witness
+Role: One of the many spirits bound to the Kazarte estate who serves as Marie's informant.
+Appearance: A translucent figure of an ancient warrior with a shattered helmet and glowing blue eyes.
+Personality: Subservient and absolutely terrified of Marie's spiritual dominance.
+--------------------
