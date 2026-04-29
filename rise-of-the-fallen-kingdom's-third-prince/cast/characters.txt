@@ -1,0 +1,370 @@
+Name: Yuri Briol
+Role: The protagonist and Third Prince of the fallen Briol Kingdom who regresses after a tragic death.
+Appearance: Dark hair with piercing blue eyes, often seen in battle-worn armor or princely attire. As a mercenary, he looks disheveled and hopeless.
+Personality: Haunted by guilt, reckless in battle, and deeply scarred by the betrayal of those he loved.
+--------------------
+Name: Hernando
+Role: A Royal Mage and close companion to Yuri during his youth.
+Appearance: A young man with light silver hair and sharp yellow eyes, dressed in elegant noble clothing.
+Personality: Cautious, responsible, and often tries to act as the voice of reason for the impulsive Yuri.
+--------------------
+Name: Ekaterina Ivarna Granzaien
+Role: The Imperial Princess and the primary traitor who orchestrated the fall of the Briol Kingdom.
+Appearance: A stunning blonde princess with cold blue eyes, often seen in elaborate royal blue gowns.
+Personality: Manipulative, calculating, and ruthless in her pursuit of the Empires interests.
+--------------------
+Name: Laurent
+Role: Yuris most loyal subordinate whose death and subsequent return as a vengeful spirit haunts Yuri.
+Appearance: A blonde knight who was once loyal but returns as a bloodied, vengeful ghost in heavy dark armor.
+Personality: Originally fiercely loyal, his soul becomes consumed by the betrayal and suffering caused by the kingdoms fall.
+--------------------
+Name: Fiore Briol
+Role: The King of Briol and Yuris father, known as the continents mightiest warrior.
+Appearance: A powerful man with a beard and regal military uniform, often depicted in portraits.
+Personality: Strong and commanding, though his absence led to the ultimate destruction of his nation.
+--------------------
+Name: Ena
+Role: Yuri's personal maid at the Briol palace.
+Appearance: A young woman with brown hair styled in two long braids, wearing a standard black and white maid uniform with a white apron.
+Personality: Responsible, loyal, and possesses surprising physical strength that catches Yuri off guard.
+--------------------
+Name: Bernard
+Role: The swordsmanship instructor for the princes of Briol.
+Appearance: A middle-aged man with a well-groomed mustache and brown hair, dressed in a professional training tunic with dark gauntlets.
+Personality: Disciplined and professional, he was famously known as the Sword Demon before serving the kingdom.
+--------------------
+Name: Goth Barkvar
+Role: The son of Count Johannes and a key traitor in Yuri's previous life.
+Appearance: A young nobleman with messy brown hair and a smug, arrogant expression, seen in ornate silver and gold armor.
+Personality: Treacherous, ambitious, and manipulative, responsible for opening the kingdom gates to the enemy.
+--------------------
+Name: Count Johannes
+Role: Goths father and a high ranking noble of the Briol Kingdom who is observant of the changes in Yuri.
+Appearance: A middle aged nobleman with greyish hair and a thin mustache wearing a sophisticated dark suit and a golden chain of office.
+Personality: Polite and diplomatic on the surface but clearly values strength and status in his sons.
+--------------------
+Name: The Second Prince
+Role: Yuris older brother who views Yuris newfound seriousness with skepticism.
+Appearance: A young man with dark hair and glasses wearing elegant royal attire with a high collar.
+Personality: Playful and condescending he treats Yuri like a hopeless troublemaker based on their past.
+--------------------
+Name: Jerrard
+Role: A soldier in the Royal Guard identified by Bernard for having immense untapped potential.
+Appearance: A young knight with light brown hair and a standard set of plate armor often seen with a relaxed or lazy posture.
+Personality: In the original timeline he was a lazy slacker who deeply regretted not training harder before the war started.
+--------------------
+Name: Sir Rosso
+Role: A senior knight in the Briol Royal Guard who oversees training and reports to the prince.
+Appearance: A tall man with brown hair and silver plate armor paired with a long dark cape.
+Personality: Professional, respectful, and slightly bewildered by the sudden change in Prince Yuri's behavior.
+--------------------
+Name: Saned
+Role: The Captain of the Briol Royal Guard who oversees the defense of the palace.
+Appearance: A middle aged man with a well groomed brown beard and hair wearing a high ranking military uniform with silver epaulets.
+Personality: Observant, professional, and deeply analytical of the martial potential within the royal family.
+--------------------
+Name: Alpha Direwolf
+Role: The leader of the pack residing on Sword Mountain.
+Appearance: A massive wolf with thick black fur and eyes that glow with a fierce orange light.
+Personality: Hostile, predatory, and commanding over the other wolves in its pack.
+--------------------
+Name: Death Knight
+Role: The guardian of the Briol ancestors dungeon who tests the worthiness of descendants.
+Appearance: A skeletal knight in heavy silver and dark plate armor with glowing red eyes and a tattered red cape.
+Personality: Stoic, duty-bound, and observant, holding deep respect for the royal bloodline.
+--------------------
+Name: Erich Briol
+Role: The first King and founder of the Briol Kingdom, known as a peerless swordsman.
+Appearance: A legendary warrior seen in memories, wearing heavy armor with a long red cape, standing victoriously on a battlefield.
+Personality: Arrogant, powerful, and historically significant as the source of the kingdoms legacy.
+--------------------
+Name: Mana Trial Guardian
+Role: A combat trial designed to test the martial skills of the kingdoms heirs.
+Appearance: A featureless humanoid figure made of pure white and blue mana, capable of manifesting weapons.
+Personality: Emotionless and relentless, purely existing to push the challenger to their limits.
+--------------------
+Name: Lily
+Role: The deceased Queen of Briol and mother of Yuri Briol.
+Appearance: A beautiful woman with long dark hair, seen in portraits wearing a dark purple gown with an elaborate blue gemstone necklace.
+Personality: Described as a protective and caring mother whose memory serves as a guide for Yuri.
+--------------------
+Name: Duke Genard
+Role: A powerful member of the Elder's Council who actively opposes Yuri's new mana method.
+Appearance: A large, pompous nobleman with blonde hair and a beard, dressed in an ornate red and gold coat with a large blue gemstone brooch.
+Personality: Arrogant, manipulative, and seeks to undermine royal authority.
+--------------------
+Name: Baron Calcio Erancha
+Role: A member of the council with actual combat experience who steps in during the debate.
+Appearance: A young man with short dark hair and a confident, almost mocking smile, wearing a stylish red leather coat.
+Personality: Bold, blunt, and seemingly unimpressed by the political posturing of the high nobility.
+--------------------
+Name: Count Sidor
+Role: The Border Count of Briol who guards the front lines and sent Calcio as his representative.
+Appearance: A legendary warrior seen in silhouettes wearing heavy plate armor and wielding a massive sword.
+Personality: Dedicated and anti-political. He is a true soldier who despises noble gatherings.
+--------------------
+Name: The Shadow Master
+Role: A mysterious leader who monitors the royal family through magical communications.
+Appearance: A middle aged man with a thick beard and a vertical scar over his right eye.
+Personality: Strategic and deeply suspicious of the changes occurring within the Briol kingdom.
+--------------------
+Name: Gorio
+Role: A powerful underworld boss and the greatest loan shark in the kingdom of Briol.
+Appearance: A middle aged man with a well groomed mustache and slicked back hair wearing an expensive patterned suit with a high collar.
+Personality: Calculating and greedy but possesses a sharp eye for talent and potential in those he deals with.
+--------------------
+Name: Eraine Wood
+Role: A merchant who currently runs a rundown trading company but is destined to become a legend.
+Appearance: A woman with dark hair tied back and light blue eyes wearing an elegant red and black gown with gold trim.
+Personality: Extremely honest and dedicated to her clients treating promises as more important than her own life.
+--------------------
+Name: Asana
+Role: An orphan in the slums who is destined to become a legendary assassin capable of toppling underworld bosses.
+Appearance: A young girl with messy dark blue hair and piercing silver eyes wearing tattered and dirty clothing.
+Personality: Currently quiet and observant but possesses a hidden lethality that Yuri recognizes from his past life.
+--------------------
+Name: Georg Ivarna Granzaien
+Role: The Second Imperial Prince of the Empire and brother to Ekaterina.
+Appearance: A young man with light blonde hair and piercing green eyes, wearing a white and gold imperial military uniform with a long red cape.
+Personality: Confident, observant, and possesses a sharp, calculating mind behind a polite noble facade.
+--------------------
+Name: Imperial Squire
+Role: Georgs chosen champion for the Trial by Combat against Yuri.
+Appearance: A young man with brown hair wearing standard Imperial plate armor and wielding a longsword.
+Personality: Disciplined, focused, and possesses a rock solid combat stance that impresses even the Royal Guard.
+--------------------
+Name: Lian Flandre
+Role: A legendary knight of the Briol Kingdom who perished in the failed Orc subjugation in the previous timeline.
+Appearance: A middle-aged man with blonde hair and a well-groomed beard, wearing a light blue noble suit with silver embroidery.
+Personality: Brave and loyal, he was considered one of the kingdom's greatest pillars before his tragic death.
+--------------------
+Name: Glasses Maid
+Role: A new maid at the Briol palace who finds herself caught in the middle of royal disputes.
+Appearance: A young woman with light brown hair tied in a bun and large round glasses, wearing a standard black and white maid uniform.
+Personality: Nervous, easily intimidated, and strictly follows the advice given by her senior staff.
+--------------------
+Name: Guillermo
+Role: The Vice President of the Elaine Trading Company who delivers critical items to Yuri.
+Appearance: A middle aged man with a well groomed mustache and slicked back brown hair wearing a formal dark suit with gold chains.
+Personality: Professional and business oriented but easily startled by magical displays of power.
+--------------------
+Name: Dungeon Prisoner
+Role: A mysterious figure held in a dungeon who seems to have a past connection to the Third Prince.
+Appearance: A man with long grey hair and a thick beard wearing worn out plate armor inside a dark cell.
+Personality: Stoic and observant with a deep voice that carries years of weariness.
+--------------------
+Name: Raymond
+Role: A senior knight of the Briol Kingdom who serves as a navigator and advisor during the march.
+Appearance: A middle aged knight with longish brown hair and a goatee wearing silver plate armor with red accents.
+Personality: Professional and dutiful with a deep knowledge of the kingdoms geography and borders.
+--------------------
+Name: Jaime Theodore
+Role: The Margrave of Sidor and commander of the front lines against the orcish invasion.
+Appearance: An elderly warrior with long grey hair and a thick beard featuring a prominent scar over his left eye and wearing heavy plate armor with a red scarf.
+Personality: Intense and pragmatic believing that the only way to survive war is through brutal first hand experience.
+--------------------
+Name: Simon Pesche
+Role: The son of Baron Wulf and a fresh recruit who accompanies Yuri into the dungeon.
+Appearance: A young knight with short brown hair and a nervous expression wearing standard silver plate armor.
+Personality: Naive and idealistic with a soft heart that is quickly shattered by the reality of warfare.
+--------------------
+Name: Corey
+Role: An interpreter fluent in the orc language who assists Prince Yuri.
+Appearance: A small figure shrouded in a tattered grey hood and cloak with grey skin and sharp teeth visible.
+Personality: Nervous and timid but possesses a rare and valuable linguistic skill.
+--------------------
+Name: Bandit Leader
+Role: A ruthless criminal leading an ambush in the forest outskirts.
+Appearance: A rugged man with long messy brown hair and a thick beard wearing leather armor with two swords strapped to his back.
+Personality: Cruel and opportunistic with no regard for human life.
+--------------------
+Name: Bandit Spy
+Role: A low ranking scout for the regional bandits who is captured by Prince Yuri during his march.
+Appearance: A young man wearing a grey hooded cloak and simple tunic, often seen bound in ropes with a terrified expression.
+Personality: Cowardly and quick to plead for his life when confronted with real power.
+--------------------
+Name: Holy Kingdom Princess
+Role: The ambitious commander of the Holy Kingdom's federation forces stationed in Gide.
+Appearance: A woman with short dark hair and piercing glowing orange eyes, wearing white and red ornate plate armor with a high collar.
+Personality: Ruthless and hyper focused on military achievements to secure her position in a royal power struggle.
+--------------------
+Name: Lord of Gide
+Role: The administrator of the independent city of Gide where the federation is gathering.
+Appearance: An elderly nobleman with a well groomed grey beard and hair wearing a rich cream tunic and a heavy red cloak with a large golden necklace.
+Personality: Diplomatic and respectful he values the history of the Briol Kingdom and seeks to maintain order in his city.
+--------------------
+Name: Fenec
+Role: The Vice Commander of the Holy Kingdom forces under Princess Sibila.
+Appearance: A young man with wavy light purple hair and sharp features wearing white plate armor and a red cape with gold accents.
+Personality: Arrogant and elitist he views the Briol Kingdom with contempt and lacks any form of respect for his allies.
+--------------------
+Name: Roy
+Role: A soldier in the Gide local guard who delivers urgent messages to the royal leaders.
+Appearance: A young messenger with short dark purple hair wearing silver and blue plate armor.
+Personality: Dutiful, respectful, and fast-acting under pressure.
+--------------------
+Name: Orc Chieftain Archer
+Role: The powerful leader of the orc ambush team who targets Yuri.
+Appearance: A massive orc with red glowing eyes and grey skin, wielding a giant bow and firing arrows infused with dark energy.
+Personality: Ruthless and vengeful, focusing his rage on the most powerful human opponent.
+--------------------
+Name: High Priest of the Holy Kingdom
+Role: A religious figure who pushed Sibila into military service for political reasons.
+Appearance: A tall man with long grey hair wearing white and grey robes with a golden chalice and cross.
+Personality: Manipulative and cold, using faith as a weapon to control the royal family.
+--------------------
+Name: Drunk Soldier
+Role: A member of the expeditionary force who witnessed Yuri's actions.
+Appearance: A young soldier with messy blonde hair and light plate armor often seen with a flushed face from drinking.
+Personality: Boisterous and easily impressed by displays of martial power.
+--------------------
+Name: Mysterious Assassin
+Role: A highly skilled observer tracking both Yuri and a legendary swordsman.
+Appearance: A woman with long dark hair and sharp features hidden under a dark hooded cloak and silver jewelry.
+Personality: Calculating and analytical with a deep respect for hidden martial talent.
+--------------------
+Name: The Innkeeper
+Role: An information source for the mysterious assassin in a local town.
+Appearance: A stout middle aged man with a thick brown mustache and a simple tan tunic.
+Personality: Greedy and observant noting the strange habits of travelers for a price.
+--------------------
+Name: Eastern Swordsman
+Role: One of the ten strongest people on the continent who is currently being tracked.
+Appearance: A warrior with long messy dark hair and tattered reddish brown clothing carrying a legendary blade.
+Personality: Stoic and enigmatic moving with a purpose unknown to others.
+--------------------
+Name: Bully Soldier
+Role: A subordinate who takes pleasure in harassing those he deems inferior.
+Appearance: A soldier in standard Briol armor with a cruel and arrogant expression.
+Personality: Prejudiced and cowardly only showing strength against the defenseless.
+--------------------
+Name: Orc Mana Warrior
+Role: An elite combatant serving the Orc Federation who is capable of using mana to reinforce his body.
+Appearance: A massive orc with pale grey skin and glowing red eyes wearing tattered red and brown garments while wielding a giant executioner blade.
+Personality: Arrogant, battle hungry, and surprisingly tactical compared to standard orc grunts.
+--------------------
+Name: Orcbal
+Role: A captured orc warrior who acts as a primary source of information during the interrogation.
+Appearance: A large battle scarred orc with red eyes and tusks often seen bound in heavy ropes during his interrogation.
+Personality: Manipulative and surprisingly aware of human social norms like honor and oaths which he tries to use to his advantage.
+--------------------
+Name: Orcua
+Role: The legendary Orc King who was responsible for the total destruction of the Briol Kingdom in the original timeline.
+Appearance: A massive and terrifying orc leader seen in flashbacks and silhouettes with glowing red eyes and heavy armor.
+Personality: Vicious and savage yet possessing a level of power and intelligence that makes him the ultimate threat to humanity.
+--------------------
+Name: Jermaine
+Role: The Priest of Briol responsible for healing the wounded soldiers after the night raid.
+Appearance: An older man with silver hair and a short beard wearing the white and gold robes of a high ranking priest.
+Personality: Hardworking, compassionate, and deeply dedicated to his duty as a healer.
+--------------------
+Name: Raphiot Artem
+Role: The second son of Count Zenon and an Imperial knight acting as a messenger for the Empires advance party.
+Appearance: A young Imperial knight with short brown hair and a confident expression wearing heavy silver plate armor with red accents.
+Personality: Respectful and professional though he holds a strong sense of pride in his fellow knights.
+--------------------
+Name: Graham Hartfall
+Role: A legendary former knight of the Empire who lost his title and now serves as a common soldier.
+Appearance: A man with messy light brown hair and a weary expression wearing standard Imperial plate armor and carrying a large shield.
+Personality: Humble, upright, and deeply burdened by his loss of status despite his immense talent.
+--------------------
+Name: Marie Rose Entree
+Role: The Duchess of Valshard and a descendant of a legendary family of archmages.
+Appearance: A young woman with long wavy red hair and piercing blue eyes wearing an elaborate red and black gown decorated with lace and pearls.
+Personality: Playful and flirtatious on the surface but incredibly sharp and observant as she uses her beauty as a political weapon.
+--------------------
+Name: Jonathan Eagle
+Role: The Commander of the Brusen Army and a representative of the seafaring nation.
+Appearance: A tall man with a thick brown beard and hair wearing a white and orange tunic under a white cloak with leather armor.
+Personality: Proud and easily provoked by insults toward his homeland but possesses a deep respect for martial strength.
+--------------------
+Name: Froin
+Role: A combatant chosen to duel the knights of Briol to prove his nations worth.
+Appearance: A knight of the Brusen kingdom wearing silver plate armor and a closed helmet that hides his features.
+Personality: Disciplined and aggressive in combat taking the challenge of a royal duel very seriously.
+--------------------
+Name: Jose Aratur
+Role: The strongest knight of the Brusen Army and a future member of the Ten Strongest.
+Appearance: A tall, muscular man with a brown goatee and hair, wearing dark chainmail and leather armor, wielding a massive greatsword.
+Personality: Ambitious, battle-hungry, and respectful of those who can endure his strikes.
+--------------------
+Name: Ragnar Gustaf Grangien
+Role: The Imperial Prince of the Empire and the Supreme Commander of the Alliance Army.
+Appearance: A powerful man with blonde hair and a goatee wearing golden and white ornate plate armor with a white fur mantle and a red cape.
+Personality: Arrogant, overwhelming, and ruthless, he detests cowards and values martial confidence above all else.
+--------------------
+Name: Kurui
+Role: Leader of the Hilly Land tribe and direct subordinate to Orcua.
+Appearance: A massive orc with red glowing eyes and large tusks seen as a shadow.
+Personality: Extremely strong warrior who united his tribe through force.
+--------------------
+Name: Guinness
+Role: A subordinate of Prince Yuri who is part of the advance patrol in the canyon.
+Appearance: A Briol knight wearing standard silver plate armor with a closed helmet and dark undersuit.
+Personality: Dutiful and alert but prone to shock when witnessing the brutal tactics of the orcs.
+--------------------
+Name: Dyke
+Role: A soldier under Yuris command who discovers the nature of the orcish trap.
+Appearance: A young Briol knight with short brown hair seen in silver armor and a blue cape.
+Personality: Observant and analytical though he is easily paralyzed by the fear of imminent death.
+--------------------
+Name: Orc Shaman Scout
+Role: A mysterious operative of the Orc Federation who uses forbidden magic to remain invisible to standard human senses.
+Appearance: A pale orc wearing a tattered dark hooded cloak and a blindfold, carrying a staff topped with a glowing purple orb.
+Personality: Cunning, elusive, and single-mindedly focused on reporting back to his king.
+--------------------
+Name: Shadow Fiend
+Role: An ancient malevolent force summoned by the orc shamans to turn the tide of the battle against the alliance.
+Appearance: A gargantuan shadowy entity manifested through dark magic with a massive face featuring jagged glowing teeth and piercing red eyes.
+Personality: A silent and terrifying predator that radiates an aura of pure malice and overwhelming power.
+--------------------
+Name: Murong Chan
+Role: The last disciple of the Azure Saint Sect and a master swordsman from the East.
+Appearance: A powerful warrior with long messy brown hair and a thick beard wearing tattered reddish brown clothing and light armor.
+Personality: Prideful, direct, and incredibly skilled, he has a massive appetite and a deep sense of honor regarding his sect.
+--------------------
+Name: Jane
+Role: A survivor from the city of Sidor who witnessed the horrific cruelty of the orcs firsthand.
+Appearance: A young woman with messy brown hair and a face covered in dirt and tears wearing tattered grey rags.
+Personality: Deeply traumatized and vengeful possessing a heart filled with grief for her lost family.
+--------------------
+Name: Aizen
+Role: The Imperial Advisor Wizard to Prince Ragnar who possesses deep knowledge of forbidden magic.
+Appearance: An elderly wizard with long grey hair and a beard, wearing dark robes and carrying a tall wooden staff.
+Personality: Stoic, analytical, and cautious when dealing with the dark secrets of the empire.
+--------------------
+Name: Rodaine
+Role: An Imperial Knight assigned by Prince Ragnar to accompany Yuri into the ruins.
+Appearance: A young Imperial knight with short brown hair and a focused expression wearing silver and grey plate armor.
+Personality: Professional and disciplined, he follows orders with absolute precision.
+--------------------
+Name: The Ancient Master
+Role: A legendary Orc Hunter from the ancient kingdom of Adelebeine whose memories are stored in the ruins.
+Appearance: A battle-hardened man with a trimmed brown beard and sharp eyes, wearing silver and gold plate armor with a brown travel cape.
+Personality: Stoic, wise, and deeply committed to his duty as a protector of humanity.
+--------------------
+Name: The Ancient Disciple
+Role: The student of the Ancient Master who helped preserve the memories of the orc hunters.
+Appearance: A young man with messy brown hair and earnest eyes, wearing a dark green hooded cloak over a white tunic.
+Personality: Loyal, idealistic, and deeply concerned for the welfare of his master and his people.
+--------------------
+Name: The Dark Sorcerer
+Role: The architect behind the creation of the orcs through the use of forbidden black magic.
+Appearance: A terrifying figure shrouded in a black hood, showing only a sinister, wide-grinning mouth and long, sharp black claws.
+Personality: Manipulative, sadistic, and driven by a desire to spread corruption and chaos.
+--------------------
+Name: Komodo Drake
+Role: The primary cavalry units used by the Orc Federation for scouting and blitz attacks.
+Appearance: Large, armored lizard-like beasts with thick scales and powerful claws, used as mounts by elite orc warriors.
+Personality: Savage and relentless predators that are trained for combat and exhibit extreme loyalty to their riders.
+--------------------
+Name: Giant Sandworm
+Role: The hidden biological siege weapon used by the Orc Federation to bypass alliance defenses.
+Appearance: A colossal segmented creature with a circular mouth filled with rows of serrated teeth used for tunneling through solid earth.
+Personality: A mindless and destructive beast that serves the commands of its orc masters.
+--------------------
+Name: Gonte Murchin
+Role: A knight from Johaim and the Baron of Pebain who witnesses Yuri's power.
+Appearance: A young man with greyish blue hair and a hooded grey cloak over light armor.
+Personality: Observant, humble, and deeply respectful of true martial talent.
+--------------------
