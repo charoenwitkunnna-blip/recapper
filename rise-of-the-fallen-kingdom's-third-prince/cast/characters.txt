@@ -368,3 +368,118 @@ Role: A knight from Johaim and the Baron of Pebain who witnesses Yuri's power.
 Appearance: A young man with greyish blue hair and a hooded grey cloak over light armor.
 Personality: Observant, humble, and deeply respectful of true martial talent.
 --------------------
+Name: Joshua
+Role: A loyal knight and comrade to Prince Yuri who perished during the initial invasion of the Briol Kingdom.
+Appearance: A young soldier with short dark hair and a blood-stained face seen wearing standard silver plate armor.
+Personality: Selfless and devoted to his duty he prioritized the safety of the prince even in his final moments.
+--------------------
+Name: The First Prince
+Role: Yuris eldest brother and a high-ranking member of the royal family who observes Yuris changes.
+Appearance: A young nobleman with dark blue hair and sharp features, wearing an elegant grey and black royal suit with a high collar.
+Personality: Playful, outgoing, and enjoys teasing his younger brothers about their past reputations while remaining secretly curious about their growth.
+--------------------
+Name: Green-Haired Elder
+Role: A member of the Briol Elder Council who still respects the royal family and the legacy of the kingdom's founder.
+Appearance: A middle-aged nobleman with short green hair and a small goatee, wearing a dark blue and grey military-style noble suit.
+Personality: Principled and outspoken, he is one of the few voices in the council willing to stand up against Duke Genards manipulation.
+--------------------
+Name: Brown-Haired Elder
+Role: A conservative member of the Elders Council who aligns himself with Duke Genards agenda.
+Appearance: A man with short brown hair and a clean-shaven face wearing a green noble tunic decorated with gold chains.
+Personality: Cautious and easily swayed by political pressure, he prioritizes stability and the status quo over royal innovation.
+--------------------
+Name: Cedric Briol
+Role: A Prince of the Briol Kingdom and Yuri's older brother who is admired for his natural charisma and leadership.
+Appearance: A tall and handsome young nobleman with brown hair and sharp features, dressed in an elegant dark blue royal suit.
+Personality: Kind, charismatic, and diplomatic, possessing the qualities of a true monarch who treats everyone with respect.
+--------------------
+Name: Half Orc
+Role: A tragic creature created by orcs through the abuse of human captives.
+Appearance: A pale deformed humanoid with red eyes and sharp teeth often seen in chains and rags.
+Personality: Mindless and suffering possessing a hollow gaze that reflects the trauma of its creation.
+--------------------
+Name: Bald Merchant
+Role: A street vendor in Gide who sells cheap mana artifacts to bandits and travelers.
+Appearance: A middle aged man with a bald head and a thick brown mustache wearing a simple grey vest over a white shirt.
+Personality: Short tempered and aggressive he has no respect for customers who do not spend money immediately.
+--------------------
+Name: Orc Commander
+Role: The field leader of the orc ambush team who challenges Yuri in single combat.
+Appearance: A tall and muscular orc with pale skin and glowing red eyes wearing a tattered red vest and wielding two large hand axes.
+Personality: Fearless and aggressive he values martial strength and is quick to retreat when his forces are overwhelmed.
+--------------------
+Name: Lute Soldier
+Role: A member of the Briol army who provides morale through music after the battle.
+Appearance: A young soldier with short dark hair wearing a simple brown tunic and playing a wooden lute by the campfire.
+Personality: Cheerful and optimistic, he focuses on bringing joy to his fellow soldiers despite the trauma of war.
+--------------------
+Name: Angry Brusen Knight
+Role: A hot headed subordinate of Jonathan Eagle who takes offense to Prince Yuri's provocations.
+Appearance: A young soldier with messy blonde hair and an aggressive expression wearing red and black Brusen military attire.
+Personality: Impulsive, fiercely patriotic, and quick to resort to violence when his homeland is insulted.
+--------------------
+Name: Knight Commander Elena
+Role: A high ranking knight commander from one of the alliance kingdoms participating in the scouting contest.
+Appearance: A woman with long red hair tied in a high ponytail wearing polished silver plate armor with a white helmet.
+Personality: Disciplined and competitive, she is eager to prove the strength of her kingdom against the fame of the Briol prince.
+--------------------
+Name: Brusen Lieutenant
+Role: A tactical subordinate to Sir Jose Aratur who assists in coordinating the alliance ambush.
+Appearance: A knight in reddish brown and black armor with a closed helmet that shows short brown hair.
+Personality: Professional and eager to capitalize on strategic openings created by the Prince.
+--------------------
+Name: Sir Kaelen
+Role: An administrative aide to Prince Yuri who tracks army casualties and soldier morale.
+Appearance: A young knight with short light brown hair and a clean shaven face wearing standard silver and blue alliance armor.
+Personality: Serious, dutiful, and deeply empathetic toward the suffering of his fellow soldiers.
+--------------------
+Name: Gerth
+Role: One of the Ten Greats and a Death Knight created through forbidden black magic who protects the ancient lands.
+Appearance: A terrifying warrior in tattered dark plate armor and a heavy black cloak with a skull like helmet and glowing red eyes.
+Personality: Stoic and menacing serving as a physical manifestation of dark sorcery.
+--------------------
+Name: Skeleton Guardian
+Role: An ancient protector of the Adelebeine ruins who awakens to test the worthiness of visitors.
+Appearance: A human skeleton wearing rusted and battered plate armor, sitting against a large stone door surrounded by orc remains.
+Personality: Stoic and duty bound, seeking to find a successor worthy of the salvation he guards.
+--------------------
+Name: The Bloodthirsty Noble
+Role: An ancient noble from Adelebeine whose obsession with murder led to the creation of the orcs.
+Appearance: A silhouette of a man sitting on a throne of corpses, surrounded by blood and dark energy, wielding a long sword.
+Personality: Sadic, obsessive, and easily manipulated by promises of power and unrestricted violence.
+--------------------
+Name: Imperial Socialites
+Role: Minor characters who spread rumors and gossip about the war and the royal families.
+Appearance: A group of wealthy men and women in the Grangien Palace wearing elaborate gowns and suits while holding glasses of red wine.
+Personality: Shallow, judgmental, and highly focused on status and romantic scandals.
+--------------------
+Name: Corpse Titan
+Role: The ultimate biological weapon created by Orcua through the fusion of his own body with the fallen dead.
+Appearance: A gargantuan humanoid entity composed entirely of thousands of fused, pale corpses with glowing red eyes and a massive gaping maw.
+Personality: A mindless engine of pure destruction fueled by the collective agony and malice of the dead souls it contains.
+--------------------
+Name: Commander Valerius
+Role: A high ranking commander of the alliance forces attending the royal banquet.
+Appearance: A woman with short brown hair wearing silver and white ornate plate armor.
+Personality: Professional and observant of the changing political landscape.
+--------------------
+Name: Imperial Official
+Role: A high ranking officer responsible for handling official imperial documentation.
+Appearance: A man with dark hair and a neat mustache wearing polished white and silver armor.
+Personality: Dutiful and stoic as he assists the High Priest during the cremation ceremony.
+--------------------
+Name: Village Girl
+Role: A citizen of Briol who welcomes the returning army.
+Appearance: A young woman with reddish-brown hair tied in two braids, wearing a green dress with a white apron and a white headscarf.
+Personality: Kind, grateful, and bold enough to approach the knights with a gift.
+--------------------
+Name: Joshua Briol
+Role: The First Prince of Briol and Yuri's eldest brother.
+Appearance: A handsome young man with dark blue hair and sharp features wearing an elegant royal suit with a high collar.
+Personality: Playful and mischievous, he enjoys pranking his siblings despite his high status.
+--------------------
+Name: Katrina
+Role: The secret love interest of Prince Cedric Briol.
+Appearance: A young woman from the Imperial family who is the cousin of Princess Ekaterina.
+Personality: Described as intelligent, kind, and a potential ally for Yuri in the Empire.
+--------------------
