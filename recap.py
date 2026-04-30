@@ -265,7 +265,7 @@ def process_chapter(chapter_url):
             "panels": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {"image_index": {"type": "INTEGER"}, "start_mark": {"type": "NUMBER"}, "end_mark": {"type": "NUMBER"}, "narration": {"type": "STRING"}, "effect": {"type": "STRING", "enum":["zoom_in", "zoom_out", "pan_down", "pan_up"]}}, "required":["image_index", "start_mark", "end_mark", "narration", "effect"]}}
         }, "required":["new_characters", "panels"]
     }
-    payload = {"contents":[{"parts": [{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
+    payload = {"contents":[{"parts":[{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
     
     script_data, current_key = None, 0
     for _ in range(15):
@@ -315,8 +315,18 @@ def process_chapter(chapter_url):
         if img_idx not in original_files: return None
         raw = Image.open(original_files[img_idx])
         scale = raw.height / ai_heights[img_idx]
+        
         top_px = max(0, int(block.get('start_mark', 0)*10*scale)-20)
         bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
+        
+        # --- SAFEGUARD FOR AI HALLUCINATIONS ---
+        if top_px >= bottom_px:
+            # Swap them if the AI inverted the numbers
+            top_px, bottom_px = bottom_px, top_px 
+            if top_px == bottom_px:
+                # If they are identical, give it a tiny valid height to prevent crash
+                bottom_px += 50 
+
         crop = raw.crop((0, top_px, raw.width, bottom_px))
         
         clean_narration = block.get('narration', '').replace('\n', ' ').replace('\r', ' ').strip()
@@ -522,17 +532,42 @@ if not os.path.exists("kokoro-v1.0.onnx"):
 if not os.path.exists("voices-v1.0.bin"):
     urllib.request.urlretrieve("https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin", "voices-v1.0.bin")
 
-current_target, processed = START_URL, 0
+current_target = START_URL
+processed = 0
+MAX_RETRIES = 3
 
 while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
-    try:
-        current_target, skipped = process_chapter(current_target)
-        if not skipped: 
-            processed += 1
-            print(f"Processed: {processed}/{MAX_CHAPTERS_TO_PROCESS} Chapters.")
-    except Exception as e:
-        print(f"Error: {e}"); break
+    chapter_retries = 0
+    success = False
+    next_target = None
+    
+    while chapter_retries < MAX_RETRIES:
+        try:
+            next_target, skipped = process_chapter(current_target)
+            if not skipped: 
+                processed += 1
+                print(f"Processed: {processed}/{MAX_CHAPTERS_TO_PROCESS} Chapters.")
+            
+            # If we reached here, the chapter was successful
+            success = True
+            break  
+            
+        except Exception as e:
+            chapter_retries += 1
+            print(f"\n[!] Error processing {current_target}: {e}")
+            if chapter_retries < MAX_RETRIES:
+                print(f"[!] Retrying chapter... (Attempt {chapter_retries}/{MAX_RETRIES}) in 5 seconds...")
+                time.sleep(5)
+            else:
+                print(f"[!] Failed to process chapter after {MAX_RETRIES} attempts.")
+                print(f"[!] Stopping script to save and stitch the current progress.")
+                
+    if not success:
+        # If we exhausted all retries and still failed, break the main loop entirely
+        break
+        
+    current_target = next_target
 
-# Run Finalizations
+# Run Finalizations (This will stitch whatever was successfully downloaded before the permanent failure)
 stitch_all_chapters()
 create_shorts_teaser()
