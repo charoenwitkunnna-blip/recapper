@@ -1,0 +1,395 @@
+Name: Nox von Rienhaber
+Role: The Pale Fiend and former friend turned traitor.
+Appearance: Long silver hair and glowing purple eyes wearing a black robe and wielding a dark blade.
+Personality: Calm and cold.
+--------------------
+Name: The Protagonist
+Role: Former comrade and friend of Nox tasked with stopping him.
+Appearance: Short black hair and glowing yellow eyes wearing a black military uniform with gold accents.
+Personality: Determined and conflicted.
+--------------------
+Name: Rune von Marbas
+Role: The former Lord of House Marbas and father of Leon who met an untimely end.
+Appearance: An older man with graying hair and a beard, often seen bound or in a position of fading power.
+Personality: Kind-hearted yet deemed too soft to lead a dark noble house during times of war.
+--------------------
+Name: Count Allen de Sylvester
+Role: The Lord of House Sylvester and a bitter rival to the Marbas family.
+Appearance: Blonde hair swept back and sharp blue eyes, wearing a purple noble suit with a large gemstone brooch.
+Personality: Arrogant and opportunistic.
+--------------------
+Name: Wellan von Marbas
+Role: The founding progenitor of House Marbas and a legendary necromancer.
+Appearance: Long black hair with glowing yellow eyes, seen in historical records wielding massive dark energy.
+Personality: Powerful and ambitious.
+--------------------
+Name: The Devil Marbas
+Role: A legendary entity that struck a pact with the Marbas bloodline.
+Appearance: A colossal lion-like beast with a massive mane, glowing red eyes, and dark horns.
+Personality: Ancient and inquisitive.
+--------------------
+Name: Sir Kerchal von Marbas
+Role: Leons uncle and the ambitious usurper of House Marbas.
+Appearance: An older man with white hair and a neatly trimmed white beard, wearing a formal black noble suit with a purple vest.
+Personality: Calculating, ruthless, and manipulative.
+--------------------
+Name: Pullen
+Role: A loyal but easily intimidated vassal of the Marbas family.
+Appearance: A man with messy brown hair and a large brown mustache, wearing a maroon noble coat.
+Personality: Devoted to the lineage of Lord Rune but lacks the courage to stand against Kerchal.
+--------------------
+Name: The Mimic
+Role: A predatory creature disguised as a prisoner to trap the unwary.
+Appearance: A young girl with long brown hair and blue eyes who transforms into a fanged monster with glowing blue eyes.
+Personality: Cunning and bloodthirsty.
+--------------------
+Name: Kaelen
+Role: The strategic advisor and high-ranking lieutenant to Count Allen.
+Appearance: A stern man with slicked-back dark hair and a jagged vertical scar running through his left eye wearing a high-collared black and gold uniform.
+Personality: Stoic and observant with a deep-seated hatred for the Marbas lineage.
+--------------------
+Name: Lord Valerius
+Role: A high-ranking member of the Marbas council who handles internal affairs.
+Appearance: A man with long straight brown hair wearing a green and gold noble vest with a large green gemstone.
+Personality: Cautious and observant but lacks the strength to lead.
+--------------------
+Name: Lord Elric
+Role: A paranoid council member who fears the shifting political landscape.
+Appearance: A man with slicked back blonde hair and a clean-shaven face wearing a blue noble suit with a white ruffled collar.
+Personality: Anxious and quick to jump to conclusions about potential threats.
+--------------------
+Name: Lord Silas
+Role: A pragmatic member of the council who values stability above all else.
+Appearance: A bald man with a dark goatee wearing a brown suit and a black tie.
+Personality: Quiet and calculating with a tendency to wait for the strongest side to emerge.
+--------------------
+Name: The Doppelganger
+Role: A powerful creature captured by Leon and converted into an undead servant to infiltrate House Sylvester.
+Appearance: A monstrous woman with long dark hair, glowing blue eyes, and sharp fangs in its true form.
+Personality: Malicious and predatory but now completely subservient to Leon's will.
+--------------------
+Name: Crow
+Role: A legendary familiar and former assassin serving the progenitor Wellan von Marbas.
+Appearance: A muscular humanoid figure made of dark purple energy with glowing white eyes and tendrils extending from his back.
+Personality: Arrogant, mocking, and blunt with a complete lack of respect for social hierarchies.
+--------------------
+Name: Valter
+Role: A mistreated slave and tavern worker with hidden potential.
+Appearance: A muscular beastman with short silver hair and wolf ears. He has piercing red eyes and a massive cross-shaped scar on his chest.
+Personality: Resigned and humble due to his circumstances but possesses a hidden strength.
+--------------------
+Name: The Madam
+Role: The arrogant proprietress of a local tavern and Valter's slave driver.
+Appearance: A tall woman with long reddish-brown hair and sharp yellow eyes wearing a low-cut white dress and gold jewelry.
+Personality: Cruel, status-obsessed, and manipulative toward those she perceives as higher or lower than her.
+--------------------
+Name: Esteban von Arkheim
+Role: The current Emperor of the Arkheim Empire who is physically frail.
+Appearance: An elderly man with long blonde hair and a beard who appears sickly with dark circles under his eyes wearing royal blue and gold robes.
+Personality: Quiet and unresponsive.
+--------------------
+Name: Louis von Arkheim
+Role: The Crown Prince and acting Regent of the Arkheim Empire.
+Appearance: A young man with short blonde hair and sharp yellow eyes wearing a white and gold royal uniform.
+Personality: Arrogant, ambitious, and power-hungry.
+--------------------
+Name: Vassal Eldoras
+Role: A messenger and subordinate of the imperial family.
+Appearance: A middle-aged man with short dark hair and a beard wearing a brown suit.
+Personality: Cowardly and desperate to please those in power.
+--------------------
+Name: Officer Thorne
+Role: A high ranking subordinate and messenger serving Count Allen of House Sylvester.
+Appearance: A man with short red hair and a smug expression wearing a white and gold imperial uniform with a purple cape and a large purple gemstone.
+Personality: Arrogant and dismissive toward those he perceives as weak like the usurper Kerchal.
+--------------------
+Name: Sylvester Messenger
+Role: A loud mouthed envoy sent by Count Allen to demand surrender.
+Appearance: A middle aged man with light brown hair and a goatee wearing a purple and blue noble suit.
+Personality: Arrogant and condescending.
+--------------------
+Name: Young Rune von Marbas
+Role: The manifestation of Leon's father within his subconscious.
+Appearance: A handsome young man with short dark hair and sharp green eyes wearing a stylish black trench coat over a white shirt and black tie.
+Personality: Calm, welcoming, and seemingly possessed of great wisdom.
+--------------------
+Name: The Sylvester Aide
+Role: A high ranking official and subordinate serving House Sylvester.
+Appearance: A middle aged man with short brown hair and a matching goatee wearing a brown noble suit and a high collared white shirt.
+Personality: Disciplined and focused on military preparation.
+--------------------
+Name: The Shadow Agent
+Role: A mysterious observer or mole operating within the inner circle of House Sylvester.
+Appearance: An older man with short white hair and a neatly trimmed white beard who possesses glowing purple eyes and wears a formal dark suit.
+Personality: Cold, calculating, and patient.
+--------------------
+Name: Sir Cedric
+Role: A high ranking knight and loyal commander serving House Marbas.
+Appearance: A man with messy silver hair and sharp grey eyes wearing dark green and black plated armor.
+Personality: Professional and stoic but deeply devoted to the Marbas bloodline.
+--------------------
+Name: Richel de Flamel
+Role: Head Acolyte of the prestigious Tower of Mages and founder of the Eremita School.
+Appearance: A young man with long dark hair and calm blue eyes wearing a blue and black mages robe with gold accents.
+Personality: Stoic and professional but clearly burdened by past dealings with dangerous individuals.
+--------------------
+Name: Karlene
+Role: Head of the southern branch of Lunatic and a ruthless loan shark.
+Appearance: A woman with long dark hair and sharp yellow eyes wearing a formal black suit with a white shirt and black tie.
+Personality: Predatory, cunning, and business-oriented with a mocking sense of humor.
+--------------------
+Name: The High Mage Headmaster
+Role: The administrator of the Eremita School and subordinate to Richel.
+Appearance: An elderly man with a long white beard and mustache wearing a dark blue hooded robe seen through a magical projection sphere.
+Personality: Anxious and desperate for his leader to return and fix the chaos at the academy.
+--------------------
+Name: The Demon King Baal
+Role: The ultimate threat and the being that rival magic schools are attempting to revive.
+Appearance: A colossal purple demonic entity with massive curved horns and four eyes glowing with dark energy and bound by heavy magical chains.
+Personality: An ancient and destructive force of nature.
+--------------------
+Name: Eremita Mages
+Role: Members of the secret magical organization led by Richel.
+Appearance: Figures wearing dark blue hooded robes that obscure their faces and wielding staves topped with glowing blue crystals.
+Personality: Disciplined and secretive.
+--------------------
+Name: King Solomon
+Role: The human sovereign and legendary hero who sealed the Demon King Baal.
+Appearance: An older man with long white hair wearing a crown and a tattered red royal cape while wielding a glowing golden staff.
+Personality: Self-sacrificing and noble.
+--------------------
+Name: The Silver Haired Lady
+Role: A mysterious observer watching Leon at the Adventurers Guild.
+Appearance: A young woman with short silver hair and sharp blue eyes wearing a white and blue dress with a fur-trimmed cape.
+Personality: Calm, observant, and cautious.
+--------------------
+Name: Laely
+Role: A high-ranking officer of the Infinite Lotus adventurers guild and the examiner for Leon.
+Appearance: A young woman with short silver hair and sharp blue eyes wearing a white and blue dress with a fur-trimmed cape.
+Personality: Cold, authoritative, and blunt.
+--------------------
+Name: The Mana Golem
+Role: A powerful stone construct infused with mana, now Leon's undead servant.
+Appearance: A massive knight-like figure made of dark blue and grey stone with glowing white eyes and sharp, jagged armor plating.
+Personality: Completely silent and obedient to its new master.
+--------------------
+Name: Pope Kadone
+Role: The corrupt leader of the Church of Arden in the city of Celici.
+Appearance: An older man with long silver hair and a goatee wearing white and gold ecclesiastical robes.
+Personality: Greedy, power-hungry, and manipulative.
+--------------------
+Name: The Saintess Twins
+Role: Heirs to a divine power who are the subject of a dark prophecy.
+Appearance: Two identical young women with long blonde hair and green eyes wearing white and gold religious habits.
+Personality: Stoic and mysterious.
+--------------------
+Name: Glazer
+Role: The personal butler and aide to Pope Kadone of Celici.
+Appearance: An older man with silver hair and a goatee wearing a formal brown and black butler suit with a bow tie.
+Personality: Professional, disciplined, and slightly nervous about the mission's secrecy.
+--------------------
+Name: The Celici Coachman
+Role: The hired driver for Leon's group who is hesitant to enter the war torn city.
+Appearance: A middle aged man with dark hair and a mustache wearing a brown vest and a black hat.
+Personality: Cautious and pragmatic but easily motivated by gold.
+--------------------
+Name: Kalivan
+Role: Captain of the Imperial Knight serving under the Emperor.
+Appearance: A handsome young man with short silver hair and sharp blue eyes wearing a dark grey and blue imperial knight uniform with a black tie.
+Personality: Arrogant, professional, and completely indifferent to the emotional suffering of others.
+--------------------
+Name: Ria
+Role: The late wife of Pope Kadone and the mother of the Saintess Twins.
+Appearance: A young woman with long blonde hair and green eyes, often seen in a nightgown in bed or during pregnancy in flashbacks.
+Personality: Kind-hearted, visionary, and deeply loving toward her husband and unborn children.
+--------------------
+Name: Cherish
+Role: One of the Saintess twins and the intended survivor of the imperial sacrifice.
+Appearance: A young woman with long blonde hair and green eyes wearing a white and gold religious habit.
+Personality: Burdened by intense survivor guilt and a desperate sense of unworthiness.
+--------------------
+Name: Heven
+Role: One of the personalities of the combined undead servant.
+Appearance: A tall woman in white and gold religious robes with long blonde hair and green eyes.
+Personality: Calm, soft-spoken, and flirtatious.
+--------------------
+Name: Hellen
+Role: The second personality of the combined undead servant.
+Appearance: Identical to Heven but with sharper eyes and a more aggressive stance.
+Personality: Fierce, blunt, and rebellious.
+--------------------
+Name: Diana von Berecia
+Role: The next head of the noble Berecia family and a childhood friend of Leon.
+Appearance: A young woman with long straight purple hair and purple eyes wearing a high-collared black and white noble dress.
+Personality: Stern, authoritative, and deeply protective of Leon with a hidden identity as a demon.
+--------------------
+Name: Rienhaber Butler
+Role: The personal attendant and advisor to the Rienhaber family.
+Appearance: A middle-aged man with short grey hair and a thick mustache wearing glasses and a formal grey three-piece suit.
+Personality: Professional, persistent, and dutifully focused on the social standing of his young master.
+--------------------
+Name: Lord Reve
+Role: A noble from a collateral branch of the Varella family who attempts to provoke Leon.
+Appearance: A man with messy light brown hair and silver eyes wearing a purple noble suit.
+Personality: Arrogant and dismissive toward those he perceives as weak but completely cowed by superior power.
+--------------------
+Name: Noxs Personal Maid
+Role: The loyal attendant and confidante of Nox von Rienhaber.
+Appearance: A young woman with long brown hair tied in a braid and warm orange eyes wearing a traditional white and black maid outfit.
+Personality: Observant, cautious, and surprised by her masters sudden interest in others.
+--------------------
+Name: The Red Eyed Swordsman
+Role: A violent intruder who crashes the social gathering.
+Appearance: A man with messy silver hair and glowing red eyes wearing a dark tattered cloak and wielding a massive broadsword.
+Personality: Aggressive and seemingly driven by a singular destructive purpose.
+--------------------
+Name: Reve de Varella
+Role: The young patriarch of the Varella family and a rival noble.
+Appearance: A young man with short silver hair and sharp blue eyes wearing a dark blue noble suit with a large blue gemstone brooch.
+Personality: Arrogant, opportunistic, and dismissive of those he considers inferior.
+--------------------
+Name: Kolmon
+Role: A powerful knight serving as a bodyguard for the Varella family.
+Appearance: A tall man with short dark hair and glowing blue eyes wearing a dark blue imperial uniform with a fur-trimmed cape.
+Personality: Stoic, disciplined, and ruthlessly obedient to his masters orders.
+--------------------
+Name: Seiren
+Role: A commoner and ambitious applicant for the chancellor position of House Marbas.
+Appearance: A young woman with long silver hair and glasses wearing a high-collared white and black dress.
+Personality: Resilient, determined, and refuses to let her social status define her future.
+--------------------
+Name: Alcard de Negishi
+Role: The third son of the frontier Negishi family and a persistent harasser of Seiren.
+Appearance: A young man with short blonde hair and a goatee wearing a brown noble suit with a yellow tie.
+Personality: Arrogant, entitled, and views commoners as tools for his own pleasure.
+--------------------
+Name: Hans
+Role: A nervous commoner and failed applicant for the steward position.
+Appearance: A young man with short blonde hair wearing a simple grey peasant shirt and brown pants.
+Personality: Hopeful but naive and easily overwhelmed by political reality.
+--------------------
+Name: The Renegade Advisor
+Role: A high-ranking subordinate and informant serving Count Allen of House Sylvester.
+Appearance: A man with messy purple hair and sharp eyes wearing a dark purple noble suit with a gold tie.
+Personality: Nervous and easily intimidated by the Count's overwhelming presence.
+--------------------
+Name: Princess Penelope von Arkheim
+Role: The Princess of the Arkheim Empire and sister to Prince Louis.
+Appearance: A young woman with long blonde hair and purple eyes wearing a high-collared light-colored noble dress with a green gemstone.
+Personality: Observant, cautious, and opposed to her brothers ruthless political maneuvering.
+--------------------
+Name: Echidna
+Role: The eldest daughter of a sacred house and a loyal aide serving Princess Penelope.
+Appearance: A young woman with long pink hair and yellow eyes wearing a white and blue military uniform with a purple cape.
+Personality: Loyal, observant, and dedicated to the stability of the empire.
+--------------------
+Name: Lahne
+Role: A research fellow and assistant at the Tower of the Eremita School of Mages.
+Appearance: A young elf woman with long blonde hair, pointed ears, and tired green eyes wearing a dark blue and black mage's robe.
+Personality: Diligent, prone to worrying, and deeply concerned for the safety of adventurers.
+--------------------
+Name: Tarell
+Role: A maniacal corrupted alchemist and the target of a high-risk mission.
+Appearance: A shadowy figure with glowing purple eyes and messy dark hair holding a flask of glowing green liquid.
+Personality: Cruel and insane.
+--------------------
+Name: Eremita Tower Guard
+Role: A security official responsible for vetting visitors to the Eremita School of Mages.
+Appearance: A young woman with short brown hair and brown eyes wearing a high-collared blue and black mages robe.
+Personality: Strict and dismissive toward those she deems unworthy of entering the tower.
+--------------------
+Name: Elysia
+Role: A devout lady of the faith and a powerful undead servant serving Leon.
+Appearance: A young woman with long blonde hair and sharp green eyes wearing a black and white religious habit with dark gloves.
+Personality: Silent, obedient, and deadly efficient in combat.
+--------------------
+Name: Tarell
+Role: The corrupted alchemist and Lahnes former lover who has fully embraced demonhood.
+Appearance: A young man with long pinkish-brown hair and glowing red eyes. He has dark demonic veins spreading from a mark on his chest and wears a white button-up shirt.
+Personality: Insane, obsessive, and driven by a twisted sense of love for Lahne.
+--------------------
+Name: The Peanut Spirit
+Role: A minor spiritual servant of Leon that often bickers with the familiar Marbas.
+Appearance: A small round purple spirit with glowing white eyes and tiny horns.
+Personality: Petty, argumentative, and easily offended.
+--------------------
+Name: Young Tarell
+Role: An orphan in the slums and the future husband of Lahne.
+Appearance: A young elven boy with messy pinkish-brown hair and tattered, dirty clothes.
+Personality: Resigned and lacking self-preservation due to his harsh life.
+--------------------
+Name: Slum Bully
+Role: A thug who tormented Tarell in the slums.
+Appearance: A muscular man with short blonde hair wearing a brown vest and bandages on his arms.
+Personality: Arrogant, violent, and predatory toward the weak.
+--------------------
+Name: The Soul Eater Chimera
+Role: The ultimate forbidden creation and biological weapon unleashed by the corrupted alchemist Tarell.
+Appearance: A colossal purple orb-like creature covered in pulsing veins and multiple glowing red eyes. It has a massive human-like mouth filled with jagged teeth and rests on long metallic spider-like legs.
+Personality: A mindless engine of destruction driven by the screams of the souls consumed to create it.
+--------------------
+Name: Rin
+Role: Personal attendant to Nox von Rienhaber.
+Appearance: A young woman with long green hair and green eyes wearing a traditional black and white maid outfit.
+Personality: Observant and deeply loyal to her master.
+--------------------
+Name: The Elidain Coachman
+Role: A carriage driver and former student of the Elidain Academy.
+Appearance: A middle-aged man with a thick brown mustache and brown hair wearing a formal dark brown suit and tie.
+Personality: Observant, blunt, and slightly pessimistic about social mobility within the academy.
+--------------------
+Name: Celsus
+Role: A legendary former Sword Emperor known for being a commoner who reached the top.
+Appearance: A man with long dark hair tied back and glowing blue eyes wielding a massive blue blade.
+Personality: Possessed of an overwhelming and genius talent that commanded respect from everyone.
+--------------------
+Name: Noah von Trinity
+Role: The newly appointed Principal of Elidain Academy and one of the Legendary Four Sages.
+Appearance: A young girl with long white hair and glowing blue eyes wearing a white dress with spiked silver accessories.
+Personality: Playful and high-energy but possesses a terrifyingly cold and murderous side when her authority or age is questioned.
+--------------------
+Name: Iana von Shader
+Role: A student from the Shader Family and one of the 5 Great Dark Families who approaches Leon for a team.
+Appearance: A young woman with long dark hair covering one eye and purple eyes wearing a black and white ruffled dress with crosses.
+Personality: Nervous, observant, and seemingly cautious.
+--------------------
+Name: The Academy Instructor
+Role: The proctor for the Elidain Academy entrance exam.
+Appearance: A bald man with a blonde beard and a vertical scar over his right eye wearing a blue and grey coat with fur trim.
+Personality: Boisterous, aggressive, and demanding.
+--------------------
+Name: Paracelsus
+Role: A high ranking student and elite swordsman competing in the Elidain entrance exam.
+Appearance: Short silver hair and sharp blue eyes wearing a white and blue combat uniform with a tan cloak and wielding a silver sword.
+Personality: Confident, aggressive, and highly skilled in combat.
+--------------------
+Name: Night Walker
+Role: A powerful magical beast lurking within the exam island.
+Appearance: A massive shadowy demonic entity with a purple aura, multiple glowing red eyes, and a gaping mouth filled with teeth.
+Personality: A mindless engine of destruction.
+--------------------
+Name: Eleanor
+Role: A student cadet at the Elidain Academy who was saved by Nox during the Night Walker attack.
+Appearance: Long red hair and blue eyes wearing a blue and black academy uniform.
+Personality: Vulnerable and shaken by her near death experience but observant of Noxs strange behavior.
+--------------------
+Name: The Disgruntled Cadet
+Role: A teammate assigned to Leons group who resents noble status.
+Appearance: Messy silver hair and glasses wearing the standard Elidain uniform.
+Personality: Arrogant, bitter, and quick to complain about his social standing compared to his teammates.
+--------------------
+Name: Lady Flora
+Role: The high ranking noble of the Tishel Merchant Group that Leon must protect.
+Appearance: A young woman with long red hair and blue eyes wearing a high collared white noble dress with a black vest.
+Personality: Sincere and observant but seemingly weighed down by the burden of being protected.
+--------------------
+Name: Jed
+Role: The loyal personal knight and bodyguard serving Lady Flora.
+Appearance: A man with long straight dark hair and dark eyes wearing a deep blue hooded cloak over dark armor.
+Personality: Stoic, self sacrificing, and possessed of a resolve that borders on fanatical.
+--------------------
+Name: The Registration Official
+Role: The academy staff member in charge of verifying student identities and requests.
+Appearance: An older man with white hair and a goatee wearing round glasses and a brown suit with a blue tie.
+Personality: Formal and slightly stuttering under the pressure of administrative duties.
+--------------------
