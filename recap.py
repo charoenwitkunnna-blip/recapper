@@ -748,7 +748,10 @@ while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
             
         except Exception as e:
             chapter_retries += 1
-            print(f"\n[!] Error processing {current_target}: {e}")
+            # ChapterError messages are ours. Anything else is sanitised to type/status,
+            # because third-party exception text can carry the full request URL.
+            reason = str(e) if isinstance(e, ChapterError) else describe_error(e)
+            print(f"\n[!] Error processing {current_target}: {reason}")
             if chapter_retries < MAX_RETRIES:
                 print(f"[!] Retrying chapter... (Attempt {chapter_retries}/{MAX_RETRIES}) in 5 seconds...")
                 time.sleep(5)
