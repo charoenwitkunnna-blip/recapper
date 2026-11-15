@@ -1,6 +1,6 @@
 from seleniumbase import SB
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 import io
 import base64
 import requests
@@ -115,7 +115,17 @@ if not os.path.exists(font_path):
     urllib.request.urlretrieve("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Black.ttf", font_path)
 font = ImageFont.truetype(font_path, 28)
 
-headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
+# Referer must match the site being scraped; a stale hardcoded one gets image
+# requests blocked and strips silently dropped.
+_start = urlparse(START_URL)
+headers = {"Referer": f"{_start.scheme}://{_start.netloc}/", "User-Agent": "Mozilla/5.0"}
+
+
+def concat_path(path):
+    """ffmpeg concat demuxer entry: single-quoted, literal quotes escaped.
+    Series names with apostrophes break the list otherwise."""
+    return "'" + os.path.abspath(path).replace(chr(92), "/").replace("'", "'\\''") + "'"
+
 
 # ================= RENDER VALIDATION =================
 # A chapter only counts as finished when the MP4 actually probes as playable.
@@ -346,7 +356,10 @@ def process_chapter(chapter_url):
             ai_img.save(buffered, format="JPEG", quality=60)
             b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
             return (idx, raw_path, ai_h, {"text": f"Image Index: {idx}"}, {"inline_data": {"mime_type": "image/jpeg", "data": b64}})
-        except: return None
+        except Exception as e:
+            # A dropped strip is a page the narration will silently skip over.
+            print(f"[{chap_num}] Strip {idx} failed ({describe_error(e)}): {img_url}")
+            return None
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=25) as executor:
         results =[r for r in executor.map(lambda p: process_image(*p), enumerate(image_urls)) if r]
@@ -354,6 +367,14 @@ def process_chapter(chapter_url):
     for idx, path, h, t, i in results:
         original_files[idx], ai_heights[idx] = path, h
         parts.extend([t, i])
+
+    if not image_urls:
+        raise ChapterError("found no chapter images on the page (selector or layout problem)")
+    dropped = len(image_urls) - len(results)
+    if dropped:
+        print(f"[{chap_num}] WARNING: {dropped}/{len(image_urls)} strip(s) failed to download; those pages are missing from the recap.")
+    if dropped > len(image_urls) * 0.2:
+        raise ChapterError(f"{dropped}/{len(image_urls)} strips failed to download; refusing to narrate a broken chapter")
 
     print(f"[{chap_num}] AI Writing Script...")
     
@@ -393,8 +414,11 @@ def process_chapter(chapter_url):
     }
     payload = {"contents":[{"parts":[{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
     
-    script_data, current_key = None, 0
+    script_data, current_key, rejected_keys = None, 0, set()
     for attempt in range(15):
+        if len(rejected_keys) >= len(GEMINI_API_KEYS):
+            print(f"[{chap_num}] All {len(GEMINI_API_KEYS)} API key(s) were rejected (401/403). Giving up on this chapter.")
+            break
         try:
             # Key goes in a header, never in the URL: requests embeds the URL in
             # exception messages, and these logs are public.
@@ -428,6 +452,7 @@ def process_chapter(chapter_url):
             time.sleep(2)
         elif res.status_code in (401, 403):
             print(f"[{chap_num}] Error {res.status_code} (key rejected). Rotating key...")
+            rejected_keys.add(current_key)
             current_key = (current_key + 1) % len(GEMINI_API_KEYS)
             time.sleep(2)
         else:
@@ -462,13 +487,26 @@ def process_chapter(chapter_url):
     kokoro = get_kokoro()
     
     def prepare_panel_assets(i, block):
-        img_idx = block.get('image_index')
+        # Gemini sometimes returns indices or marks as strings; a mismatch here
+        # would silently drop a panel and desync narration from artwork.
+        try:
+            img_idx = int(block.get('image_index'))
+        except (TypeError, ValueError):
+            print(f"[{chap_num}] Panel {i}: bad image_index {block.get('image_index')!r}, skipping panel.")
+            return None
+        img_idx = max(0, min(img_idx, max(original_files) if original_files else 0))
         if img_idx not in original_files: return None
+        
+        def _mark(name, default):
+            try:
+                return float(block.get(name, default))
+            except (TypeError, ValueError):
+                return float(default)
         raw = Image.open(original_files[img_idx])
         scale = raw.height / ai_heights[img_idx]
         
-        top_px = max(0, int(block.get('start_mark', 0)*10*scale)-20)
-        bottom_px = min(raw.height, int(block.get('end_mark', 10)*10*scale)+20)
+        top_px = max(0, int(_mark('start_mark', 0)*10*scale)-20)
+        bottom_px = min(raw.height, int(_mark('end_mark', 10)*10*scale)+20)
         
         # --- SAFEGUARD FOR AI HALLUCINATIONS ---
         if top_px >= bottom_px:
@@ -492,7 +530,13 @@ def process_chapter(chapter_url):
                 safe_text = re.sub(r'[^a-zA-Z0-9\s.,?!]', '', clean_narration)
                 if not safe_text.strip(): safe_text = "..."
                 try: samples, _ = kokoro.create(safe_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
-                except: samples, _ = kokoro.create("...", voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+                except Exception:
+                    try: samples, _ = kokoro.create("...", voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
+                    except Exception as e2:
+                        raise ChapterError(f"TTS failed on panel {i} ({describe_error(e2)})")
+        if len(samples) == 0:
+            print(f"[{chap_num}] Panel {i}: TTS returned no audio; substituting silence.")
+            samples = [0.0] * int(0.5 * 24000)
                 
         audio_path = os.path.join(temp_dir, f"audio_{i:04d}.wav")
         sf.write(audio_path, samples, 24000)
@@ -566,7 +610,7 @@ def process_chapter(chapter_url):
 
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
-        f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
+        f.write("\n".join([concat_path(c[1]) for c in ffmpeg_tasks]))
     
     concat = _run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
                    "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", final_path], timeout=10800)
@@ -614,7 +658,7 @@ def stitch_all_chapters():
     if not valid_chaps: return
     list_path = os.path.join(MANGA_NAME, "full_recap_list.txt")
     with open(list_path, "w") as f:
-        for num, vp in valid_chaps: f.write(f"file '{os.path.abspath(vp).replace(chr(92), '/')}'\n")
+        for num, vp in valid_chaps: f.write(concat_path(vp) + "\n")
     
     final_recap_path = os.path.join("videos", f"{MANGA_NAME}_full_recap.mp4")
     
@@ -717,8 +761,8 @@ def create_shorts_teaser():
     print("Stitching Short together...")
     list_path = os.path.join(shorts_dir, "list.txt")
     with open(list_path, "w") as f:
-        f.write(f"file '{os.path.abspath(hook_video_path).replace(chr(92), '/')}'\n")
-        f.write(f"file '{os.path.abspath(cta_video_path).replace(chr(92), '/')}'\n")
+        f.write(concat_path(hook_video_path) + "\n")
+        f.write(concat_path(cta_video_path) + "\n")
 
     final_short_path = os.path.join("videos", f"{MANGA_NAME}_shorts.mp4")
     short = _run([
