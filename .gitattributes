@@ -1,0 +1,5 @@
+# Keep shell scripts and workflows LF even on Windows checkouts: CRLF breaks
+# shebangs and is rejected by some Actions tooling.
+*.sh text eol=lf
+*.yml text eol=lf
+*.py text
