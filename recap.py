@@ -610,7 +610,7 @@ def process_chapter(chapter_url):
 
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
-        f.write("\n".join([concat_path(c[1]) for c in ffmpeg_tasks]))
+        f.write("\n".join(["file " + concat_path(c[1]) for c in ffmpeg_tasks]))
     
     concat = _run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
                    "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", final_path], timeout=10800)
@@ -658,7 +658,7 @@ def stitch_all_chapters():
     if not valid_chaps: return
     list_path = os.path.join(MANGA_NAME, "full_recap_list.txt")
     with open(list_path, "w") as f:
-        for num, vp in valid_chaps: f.write(concat_path(vp) + "\n")
+        for num, vp in valid_chaps: f.write("file " + concat_path(vp) + "\n")
     
     final_recap_path = os.path.join("videos", f"{MANGA_NAME}_full_recap.mp4")
     
@@ -761,8 +761,8 @@ def create_shorts_teaser():
     print("Stitching Short together...")
     list_path = os.path.join(shorts_dir, "list.txt")
     with open(list_path, "w") as f:
-        f.write(concat_path(hook_video_path) + "\n")
-        f.write(concat_path(cta_video_path) + "\n")
+        f.write("file " + concat_path(hook_video_path) + "\n")
+        f.write("file " + concat_path(cta_video_path) + "\n")
 
     final_short_path = os.path.join("videos", f"{MANGA_NAME}_shorts.mp4")
     short = _run([
