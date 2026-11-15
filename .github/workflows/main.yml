@@ -58,6 +58,18 @@ jobs:
           pip install seleniumbase requests pillow numpy soundfile kokoro-onnx
           seleniumbase install chromedriver
 
+      # Cache the pip download/wheel cache and the seleniumbase driver store so
+      # repeated runs skip re-downloading packages and the Chrome driver.
+      # Keyed on a manual salt: bump it only when the install list changes.
+      - name: Restore pip and driver caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/seleniumbase
+            ~/.cache/selenium
+          key: recap-deps-v1
+
       # Static cache: ~300 MB of TTS weights, re-downloaded on every run otherwise.
       - name: Restore TTS models
         uses: actions/cache@v4
