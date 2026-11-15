@@ -1,5 +1,14 @@
+# Rendered media is generated output, never source. Videos belong in Actions
+# artifacts (or a release), not in git history — the repo hit 5.9 GB doing that.
 */temp/
+*/shorts_temp/
+*/chapters/*/video.mp4
+videos/
+
+# Downloaded model weights and seleniumbase breadcrumbs
 *.onnx
 *.bin
+downloaded_files/*.lock
+
 __pycache__/
-videos/
+*.pyc

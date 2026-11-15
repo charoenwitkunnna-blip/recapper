@@ -37,35 +37,78 @@ else:
 url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
 
-# --- DYNAMIC API KEY EXTRACTION ---
-GEMINI_API_KEYS =[]
-temp_keys =[]
-pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
+# --- API KEY EXTRACTION ---
+# Keys are read once, kept in memory only, and stripped from the environment before
+# any render/subprocess runs. They never appear in a URL or in log output.
+GEMINI_API_KEYS = []
+_collected = []
+_pattern = re.compile(r"GEMINI_API_KEY_(\d+)")
 
-all_secrets_raw = os.environ.get("ALL_SECRETS")
-if all_secrets_raw:
+def _valid_key(value):
+    value = (value or "").strip()
+    return value if value and "YOUR_API_KEY" not in value else None
+
+# Preferred: one secret holding a JSON array, e.g. GEMINI_API_KEYS=["k1","k2"]
+_raw_list = os.environ.get("GEMINI_API_KEYS", "")
+if _raw_list.strip():
     try:
-        secrets_dict = json.loads(all_secrets_raw)
-        for key, value in secrets_dict.items():
-            match = pattern.fullmatch(key)
-            if match and value.strip() and "YOUR_API_KEY" not in value:
-                temp_keys.append((int(match.group(1)), value.strip()))
-    except json.JSONDecodeError: pass
+        _parsed = json.loads(_raw_list)
+        if isinstance(_parsed, list):
+            for _i, _value in enumerate(_parsed):
+                _key = _valid_key(_value)
+                if _key:
+                    _collected.append((_i, _key))
+        else:
+            print("[!] GEMINI_API_KEYS is JSON but not an array, ignoring it.")
+    except json.JSONDecodeError:
+        print("[!] GEMINI_API_KEYS is not valid JSON, ignoring it.")
 
-if not temp_keys:
-    for key, value in os.environ.items():
-        match = pattern.fullmatch(key)
-        if match and value.strip() and "YOUR_API_KEY" not in value:
-            temp_keys.append((int(match.group(1)), value.strip()))
+# Individually named environment variables: GEMINI_API_KEY_1, GEMINI_API_KEY_2, ...
+for _name, _value in os.environ.items():
+    _match = _pattern.fullmatch(_name)
+    if _match:
+        _key = _valid_key(_value)
+        if _key:
+            _collected.append((int(_match.group(1)), _key))
 
-temp_keys.sort(key=lambda x: x[0])
-for _, key_value in temp_keys:
-    GEMINI_API_KEYS.append(key_value)
-    
+# Deprecated: every repository secret handed over as one JSON blob. Read, then drop.
+_all_secrets_raw = os.environ.pop("ALL_SECRETS", "")
+if _all_secrets_raw:
+    try:
+        for _name, _value in json.loads(_all_secrets_raw).items():
+            _match = _pattern.fullmatch(_name)
+            if _match:
+                _key = _valid_key(_value)
+                if _key:
+                    _collected.append((int(_match.group(1)), _key))
+    except json.JSONDecodeError:
+        pass
+
+_seen = set()
+for _order, _key in sorted(_collected, key=lambda x: x[0]):
+    if _key not in _seen:
+        _seen.add(_key)
+        GEMINI_API_KEYS.append(_key)
+
+if not GEMINI_API_KEYS:
+    raise SystemExit("[!] No Gemini API keys found. Set GEMINI_API_KEYS (JSON array) or GEMINI_API_KEY_1..N.")
+
+# Scrub secrets so third-party imports, Selenium and ffmpeg subprocesses cannot see them.
+for _name in [n for n in os.environ if n.startswith("GEMINI_API_KEY") or n == "ALL_SECRETS"]:
+    os.environ.pop(_name, None)
+CHILD_ENV = dict(os.environ)
+
+GEMINI_MODEL = (os.environ.get("GEMINI_MODEL") or "gemini-flash-latest").strip()
+GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+GEMINI_TIMEOUT = 300
+print(f"[i] Loaded {len(GEMINI_API_KEYS)} Gemini API key(s); model={GEMINI_MODEL}")
+
+def describe_error(exc):
+    """Type-only error description: requests embeds the request URL (and API key) in str(exc)."""
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    return f"{type(exc).__name__} (HTTP {status})" if status else type(exc).__name__
+
 os.makedirs("videos", exist_ok=True)
-
-with open(".gitignore", "w") as f:
-    f.write("*/temp/\n*.onnx\n*.bin\n__pycache__/\nvideos/\n")
 
 font_path = "Roboto-Black.ttf"
 if not os.path.exists(font_path):
@@ -73,6 +116,79 @@ if not os.path.exists(font_path):
 font = ImageFont.truetype(font_path, 28)
 
 headers = {"Referer": "https://manhuaus.com/", "User-Agent": "Mozilla/5.0"}
+
+# ================= RENDER VALIDATION =================
+# A chapter only counts as finished when the MP4 actually probes as playable.
+# Without this, a crashed ffmpeg leaves a 0-byte video.mp4 that every later run
+# trusts and skips, silently poisoning the stitched recap.
+FFPROBE = shutil.which("ffprobe") or "ffprobe"
+MIN_CHAPTER_SECONDS = 5.0
+MARKER_NAME = "done.json"
+RENDER_VERSION = 1
+FFMPEG_WORKERS = max(1, min(4, os.cpu_count() or 2))
+
+
+class ChapterError(RuntimeError):
+    """Raised for a chapter that must be retried: render failed or produced an invalid file."""
+
+
+def _run(cmd, **kwargs):
+    """subprocess.run with secrets-free env, captured output, and a hard timeout."""
+    kwargs.setdefault("capture_output", True)
+    kwargs.setdefault("text", True)
+    kwargs.setdefault("timeout", 7200)
+    return subprocess.run(cmd, env=CHILD_ENV, **kwargs)
+
+
+def probe_duration(path):
+    """Duration in seconds, or 0.0 if the file is missing, empty, or unplayable."""
+    if not path or not os.path.exists(path) or os.path.getsize(path) < 1024:
+        return 0.0
+    try:
+        proc = _run([FFPROBE, "-v", "error", "-show_entries", "format=duration",
+                     "-of", "default=nw=1:nk=1", path], timeout=120)
+        return float((proc.stdout or "").strip())
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return 0.0
+
+
+def marker_path(chap_dir):
+    return os.path.join(chap_dir, MARKER_NAME)
+
+
+def write_marker(chap_dir, chapter_url, chap_num, video_path):
+    """Record a validated render. Also makes git the source of truth for progress,
+    since the MP4s themselves are no longer committed."""
+    duration = probe_duration(video_path)
+    record = {
+        "chapter": str(chap_num),
+        "url": chapter_url,
+        "duration": round(duration, 2),
+        "bytes": os.path.getsize(video_path),
+        "render_version": RENDER_VERSION,
+        "finished_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    with open(marker_path(chap_dir), "w", encoding="utf-8") as f:
+        json.dump(record, f, indent=2)
+    return duration
+
+
+def is_chapter_done(chap_dir, video_path, chap_num, chapter_url):
+    """True only if the MP4 is present and playable. Backfills the marker for
+    pre-marker renders so existing work is not thrown away."""
+    if probe_duration(video_path) < MIN_CHAPTER_SECONDS:
+        return False
+    marker = marker_path(chap_dir)
+    if os.path.exists(marker):
+        try:
+            with open(marker, "r", encoding="utf-8") as f:
+                record = json.load(f)
+            return int(record.get("render_version", 0)) == RENDER_VERSION
+        except (OSError, ValueError):
+            return False
+    write_marker(chap_dir, chapter_url, chap_num, video_path)
+    return True
+
 
 def extract_next_url(sb, retries=3):
     """Bulletproof Python-side extraction with retries for late-rendering React DOMs."""
@@ -126,8 +242,8 @@ def process_chapter(chapter_url):
     highest_file = os.path.join(chapters_dir, "highest.txt")
     final_path = os.path.join(current_chap_dir, "video.mp4")
 
-    if os.path.exists(final_path):
-        print(f"[{chap_num}] Video already exists! Skipping...")
+    if is_chapter_done(current_chap_dir, final_path, chap_num, chapter_url):
+        print(f"[{chap_num}] Video already rendered and playable ({probe_duration(final_path):.1f}s). Skipping...")
         next_url = None
         with SB(uc=True, xvfb=True, locale_code="en", page_load_strategy="eager") as sb:
             sb.uc_open_with_reconnect(chapter_url, reconnect_time=4)
@@ -268,37 +384,63 @@ def process_chapter(chapter_url):
     payload = {"contents":[{"parts":[{"text": prompt}] + parts}], "generationConfig": {"responseMimeType": "application/json", "responseSchema": schema}}
     
     script_data, current_key = None, 0
-    for _ in range(15):
+    for attempt in range(15):
         try:
-            res = requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEYS[current_key]}", json=payload)
-            if res.status_code == 200:
-                try:
-                    raw_text = res.json()['candidates'][0]['content']['parts'][0]['text']
-                    start_idx, end_idx = raw_text.find('{'), raw_text.rfind('}')
-                    if start_idx != -1 and end_idx != -1:
-                        script_data = json.loads(raw_text[start_idx:end_idx+1])
-                        break 
-                except: pass
-                time.sleep(2) 
-            elif res.status_code == 400:
-                print(f"[{chap_num}] Error 400 (Bad Request). Prompt issue. Retrying with same key...")
-                time.sleep(2)
-            else:
-                print(f"[{chap_num}] Error {res.status_code} (Rate Limit/Unavailable). Switching API key...")
-                current_key = (current_key + 1) % len(GEMINI_API_KEYS)
-                time.sleep(2)
+            # Key goes in a header, never in the URL: requests embeds the URL in
+            # exception messages, and these logs are public.
+            res = requests.post(
+                GEMINI_ENDPOINT,
+                json=payload,
+                timeout=GEMINI_TIMEOUT,
+                headers={"x-goog-api-key": GEMINI_API_KEYS[current_key]},
+            )
         except requests.exceptions.RequestException as e:
-            print(f"[{chap_num}] Network Error: {e}. Switching API key...")
+            print(f"[{chap_num}] Network error ({describe_error(e)}). Rotating key.")
+            current_key = (current_key + 1) % len(GEMINI_API_KEYS)
+            time.sleep(min(60, 2 * (attempt + 1)))
+            continue
+
+        if res.status_code == 200:
+            try:
+                candidate = res.json()['candidates'][0]
+                finish = candidate.get('finishReason', '')
+                raw_text = candidate['content']['parts'][0]['text']
+                start_idx, end_idx = raw_text.find('{'), raw_text.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    script_data = json.loads(raw_text[start_idx:end_idx+1])
+                    break
+                print(f"[{chap_num}] Response contained no JSON object (finishReason={finish or 'unknown'}). Retrying.")
+            except (KeyError, IndexError, TypeError, ValueError) as e:
+                print(f"[{chap_num}] Unusable response ({describe_error(e)}). Retrying.")
+            time.sleep(2)
+        elif res.status_code == 400:
+            print(f"[{chap_num}] Error 400 (Bad Request). Prompt issue. Retrying with same key...")
+            time.sleep(2)
+        elif res.status_code in (401, 403):
+            print(f"[{chap_num}] Error {res.status_code} (key rejected). Rotating key...")
             current_key = (current_key + 1) % len(GEMINI_API_KEYS)
             time.sleep(2)
+        else:
+            retry_after = res.headers.get("retry-after", "")
+            delay = min(60, max(2, int(retry_after))) if retry_after.isdigit() else 2
+            print(f"[{chap_num}] Error {res.status_code} (Rate Limit/Unavailable). Rotating key, waiting {delay}s...")
+            current_key = (current_key + 1) % len(GEMINI_API_KEYS)
+            time.sleep(delay)
 
-    if not script_data: return next_url, False
+    if not script_data:
+        raise ChapterError("Gemini produced no usable script after 15 attempts")
 
-    # Save new characters
+    # Save new characters (names already on file are skipped, so a chapter retry
+    # does not duplicate lore)
     if script_data.get('new_characters'):
+        known_names = set(re.findall(r"^Name:\s*(.+)$", existing_chars_text, re.MULTILINE))
         with open(char_file, "a", encoding="utf-8") as f:
             for c in script_data['new_characters']:
-                f.write(f"Name: {c.get('name')}\nRole: {c.get('role')}\nAppearance: {c.get('appearance')}\nPersonality: {c.get('personality')}\n{'-'*20}\n")
+                name = (c.get('name') or '').strip()
+                if not name or name in known_names:
+                    continue
+                known_names.add(name)
+                f.write(f"Name: {name}\nRole: {c.get('role')}\nAppearance: {c.get('appearance')}\nPersonality: {c.get('personality')}\n{'-'*20}\n")
                 
     # Save the current chapter's narration to act as context for the next chapter
     if script_data.get('panels'):
@@ -390,34 +532,76 @@ def process_chapter(chapter_url):
         return (cmd, v_out)
 
     ffmpeg_tasks =[]
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=FFMPEG_WORKERS) as ex:
         results = ex.map(lambda p: prepare_panel_assets(p[0], p[1]), enumerate(script_data['panels']))
         for res in results:
             if res: ffmpeg_tasks.append(res)
 
-    print(f"[{chap_num}] Rendering Synced Clips...")
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as ex:[subprocess.run(c[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) for c in ffmpeg_tasks]
+    if not ffmpeg_tasks:
+        raise ChapterError(f"no renderable panels (panels={len(script_data.get('panels') or [])}, images={len(image_urls)})")
+
+    print(f"[{chap_num}] Rendering {len(ffmpeg_tasks)} Synced Clips...")
+
+    def render_clip(cmd):
+        proc = _run(cmd, timeout=3600)
+        tail = " | ".join((proc.stderr or "").strip().splitlines()[-3:])
+        return os.path.basename(cmd[-1]), proc.returncode, tail
+
+    failures = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=FFMPEG_WORKERS) as ex:
+        for out_name, rc, tail in ex.map(render_clip, [c[0] for c in ffmpeg_tasks]):
+            if rc != 0:
+                failures.append(f"{out_name} rc={rc} {tail}")
+    if failures:
+        raise ChapterError(f"{len(failures)} clip(s) failed: " + "; ".join(failures[:3]))
 
     list_path = os.path.join(temp_dir, "list.txt")
     with open(list_path, "w") as f:
         f.write("\n".join([f"file '{os.path.abspath(c[1]).replace(chr(92), '/')}'" for c in ffmpeg_tasks]))
     
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path, "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", final_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    concat = _run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
+                   "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", final_path], timeout=10800)
+    if concat.returncode != 0:
+        tail = " | ".join((concat.stderr or "").strip().splitlines()[-5:])
+        raise ChapterError(f"final concat failed (rc={concat.returncode}): {tail}")
+
+    duration = write_marker(current_chap_dir, chapter_url, chap_num, final_path)
+    if duration < MIN_CHAPTER_SECONDS:
+        # Never leave an invalid render behind: existence alone must not mark a chapter done.
+        print(f"[{chap_num}] Rendered video failed validation ({duration:.1f}s). Discarding so it retries.")
+        for path in (final_path, marker_path(current_chap_dir)):
+            if os.path.exists(path):
+                os.remove(path)
+        raise ChapterError(f"invalid render: {duration:.1f}s")
+
+    print(f"[{chap_num}] Done: {duration:.1f}s, {os.path.getsize(final_path)//1024} KB")
     with open(highest_file, "w") as f: f.write(str(chap_num))
     shutil.rmtree(temp_dir, ignore_errors=True)
     return next_url, False
 
+def collect_rendered_chapters(chapters_dir):
+    """Chapter videos that actually play, sorted by chapter number."""
+    found = []
+    if not os.path.exists(chapters_dir):
+        return found
+    for d in os.listdir(chapters_dir):
+        chap_dir = os.path.join(chapters_dir, d)
+        vp = os.path.join(chap_dir, "video.mp4")
+        if not os.path.isdir(chap_dir) or not os.path.exists(vp):
+            continue
+        if probe_duration(vp) < MIN_CHAPTER_SECONDS:
+            print(f"[!] Skipping unplayable render: {vp}")
+            continue
+        m = re.search(r'\d+', d)
+        found.append((int(m.group(0)) if m else 0, vp))
+    found.sort(key=lambda x: x[0])
+    return found
+
+
 def stitch_all_chapters():
     print(f"\n{'='*50}\n[FINALIZING] Stitching Recap (Fast Copy)\n{'='*50}")
     chapters_dir = os.path.join(MANGA_NAME, "chapters")
-    if not os.path.exists(chapters_dir): return
-    valid_chaps =[]
-    for d in os.listdir(chapters_dir):
-        vp = os.path.join(chapters_dir, d, "video.mp4")
-        if os.path.exists(vp):
-            m = re.search(r'\d+', d)
-            valid_chaps.append((int(m.group(0)) if m else 0, vp))
-    valid_chaps.sort(key=lambda x: x[0])
+    valid_chaps = collect_rendered_chapters(chapters_dir)
     if not valid_chaps: return
     list_path = os.path.join(MANGA_NAME, "full_recap_list.txt")
     with open(list_path, "w") as f:
@@ -426,11 +610,16 @@ def stitch_all_chapters():
     final_recap_path = os.path.join("videos", f"{MANGA_NAME}_full_recap.mp4")
     
     # Fast Stitching - Because clips are natively 1.1x speed via Kokoro, we can instantly copy them!
-    subprocess.run([
+    concat = _run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
         "-c:v", "copy", "-c:a", "copy",
         final_recap_path
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ], timeout=10800)
+    if concat.returncode != 0:
+        tail = " | ".join((concat.stderr or "").strip().splitlines()[-5:])
+        print(f"[!] Recap stitch failed (rc={concat.returncode}): {tail}")
+    else:
+        print(f"[i] Recap stitched: {final_recap_path} ({probe_duration(final_recap_path):.1f}s)")
     
     if os.path.exists(list_path): os.remove(list_path)
 
@@ -440,20 +629,11 @@ def create_shorts_teaser():
     print(f"\n{'='*50}\n[SHORT GENERATOR] Creating High-Speed YouTube Shorts Teaser\n{'='*50}")
     
     chapters_dir = os.path.join(MANGA_NAME, "chapters")
-    if not os.path.exists(chapters_dir): 
+    valid_chaps = collect_rendered_chapters(chapters_dir)
+    if not valid_chaps: 
         print("No chapters found to create shorts.")
         return
-        
-    valid_chaps =[]
-    for d in os.listdir(chapters_dir):
-        vp = os.path.join(chapters_dir, d, "video.mp4")
-        if os.path.exists(vp):
-            m = re.search(r'\d+', d)
-            valid_chaps.append((int(m.group(0)) if m else 0, vp))
             
-    valid_chaps.sort(key=lambda x: x[0])
-    if not valid_chaps: return
-    
     first_chap_video = valid_chaps[0][1] 
 
     shorts_dir = os.path.join(MANGA_NAME, "shorts_temp")
@@ -484,23 +664,31 @@ def create_shorts_teaser():
     img.save(cta_img_path)
 
     cta_video_path = os.path.join(shorts_dir, "cta_video.mp4")
-    subprocess.run([
+    cta = _run([
         "ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", cta_img_path, "-i", cta_audio_path,
         "-c:v", "libx264", "-preset", "faster", "-c:a", "aac", "-ar", "44100", "-b:a", "128k",
         "-pix_fmt", "yuv420p", "-t", str(cta_dur), cta_video_path
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ], timeout=1800)
+    if cta.returncode != 0:
+        print(f"[!] CTA render failed (rc={cta.returncode}): {' | '.join((cta.stderr or '').strip().splitlines()[-3:])}")
+        shutil.rmtree(shorts_dir, ignore_errors=True)
+        return
 
     print("Applying Speed to Chapter 1 and formatting for Shorts...")
     hook_video_path = os.path.join(shorts_dir, "hook_video.mp4")
     
     max_hook_length = 59.0 - cta_dur 
+    if max_hook_length < 5.0:
+        print(f"[!] CTA audio is {cta_dur:.1f}s, leaving no room for a hook. Skipping shorts.")
+        shutil.rmtree(shorts_dir, ignore_errors=True)
+        return
 
     # Because base video is natively 1.1x speed, we apply a 1.25x speedup modifier to reach ~1.375x fast pacing.
     # setpts=0.8*PTS handles the video speed. atempo=1.25 handles audio speed. They stay perfectly synced!
     vf_string = "[0:v]setpts=0.8*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.8*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
     af_string = "[0:a]atempo=1.25[aout]"
     
-    subprocess.run([
+    hook = _run([
         "ffmpeg", "-y", "-i", first_chap_video,
         "-filter_complex", f"{vf_string};{af_string}",
         "-map", "[vout]", "-map", "[aout]",
@@ -508,7 +696,11 @@ def create_shorts_teaser():
         "-c:v", "libx264", "-preset", "faster", "-crf", "28", 
         "-c:a", "aac", "-b:a", "128k", "-pix_fmt", "yuv420p",
         hook_video_path
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    ], timeout=3600)
+    if hook.returncode != 0:
+        print(f"[!] Hook render failed (rc={hook.returncode}): {' | '.join((hook.stderr or '').strip().splitlines()[-3:])}")
+        shutil.rmtree(shorts_dir, ignore_errors=True)
+        return
 
     print("Stitching Short together...")
     list_path = os.path.join(shorts_dir, "list.txt")
@@ -517,12 +709,14 @@ def create_shorts_teaser():
         f.write(f"file '{os.path.abspath(cta_video_path).replace(chr(92), '/')}'\n")
 
     final_short_path = os.path.join("videos", f"{MANGA_NAME}_shorts.mp4")
-    subprocess.run([
+    short = _run([
         "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_path,
         "-c:v", "copy", "-c:a", "copy", final_short_path
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    print(f"✅ Fast-Paced Short Teaser generated successfully: {final_short_path}")
+    ], timeout=1800)
+    if short.returncode == 0:
+        print(f"[i] Short teaser generated: {final_short_path} ({probe_duration(final_short_path):.1f}s)")
+    else:
+        print(f"[!] Short stitch failed (rc={short.returncode}): {' | '.join((short.stderr or '').strip().splitlines()[-3:])}")
     shutil.rmtree(shorts_dir, ignore_errors=True) 
 
 

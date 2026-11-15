@@ -13,21 +13,39 @@ on:
         required: true
         default: '1'
         type: string
+      video_source_commit:
+        description: 'One-time: commit SHA to restore already-rendered chapter videos from (warms the cache). Leave empty normally.'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
 
+# Two dispatches at once would race on the same branch while pushing binary-free
+# commits and fighting over the chapter cache. Serialize instead.
+concurrency:
+  group: recapper-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   run-ai-recapper:
     runs-on: ubuntu-latest
+    # Previous runs ran 5h11m and 5h38m. Stop cleanly under the 6h job ceiling so
+    # the commit step still executes, instead of being killed mid-render.
+    timeout-minutes: 350
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # Only code + lore + markers are tracked now; videos live in the cache below.
+          fetch-depth: 1
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: pip
 
       # System dependencies for video/audio processing
       - name: Install System Dependencies
@@ -41,38 +59,110 @@ jobs:
           pip install seleniumbase requests pillow numpy soundfile kokoro-onnx
           seleniumbase install chromedriver
 
-      # Pass UI Inputs as Env Variables for the Python Script
+      # Static cache: ~300 MB of TTS weights, re-downloaded on every run otherwise.
+      - name: Restore TTS models
+        uses: actions/cache@v4
+        with:
+          path: |
+            kokoro-v1.0.onnx
+            voices-v1.0.bin
+          key: recap-models-v1
+
+      # Rolling cache: already-rendered chapters. Without this, dropping videos from
+      # git would make every run regenerate the whole series from scratch.
+      # Note: repo cache budget is 10 GB; older entries evict automatically.
+      - name: Restore rendered chapters
+        uses: actions/cache@v4
+        with:
+          path: |
+            */chapters
+            videos
+          key: recap-chapters-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            recap-chapters-
+
+      # One-time bootstrap: the rendered chapters still live in git history. Pull them
+      # into the worktree once so the cache above has something to save, otherwise the
+      # first run after this change re-renders the whole series.
+      - name: Seed rendered chapters from history
+        if: inputs.video_source_commit != ''
+        run: |
+          git fetch --depth=1 origin "${{ inputs.video_source_commit }}"
+          count=0
+          while read -r path; do
+            mkdir -p "$(dirname "$path")"
+            git show "FETCH_HEAD:$path" > "$path"
+            count=$((count + 1))
+          done < <(git ls-tree -r --name-only FETCH_HEAD | grep 'chapters/.*/video\.mp4$' || true)
+          echo "Restored $count chapter video(s) from ${{ inputs.video_source_commit }}"
+
+      # Keys are passed as plain env vars. Do NOT hand the whole secret set over via
+      # toJSON(secrets): everything in env is readable by unpinned third-party deps.
       - name: Run AI Video Recapper
         env:
-          ALL_SECRETS: ${{ toJSON(secrets) }}
+          PYTHONUNBUFFERED: '1'
           START_URL: ${{ inputs.manga_url }}
           MAX_CHAPTERS: ${{ inputs.max_chapters }}
-        run: |
-          python recap.py
+          GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
+          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
+          GEMINI_API_KEY_4: ${{ secrets.GEMINI_API_KEY_4 }}
+          GEMINI_API_KEY_5: ${{ secrets.GEMINI_API_KEY_5 }}
+          GEMINI_API_KEY_6: ${{ secrets.GEMINI_API_KEY_6 }}
+          GEMINI_API_KEY_7: ${{ secrets.GEMINI_API_KEY_7 }}
+          GEMINI_API_KEY_8: ${{ secrets.GEMINI_API_KEY_8 }}
+          GEMINI_API_KEY_9: ${{ secrets.GEMINI_API_KEY_9 }}
+          GEMINI_API_KEY_10: ${{ secrets.GEMINI_API_KEY_10 }}
+          GEMINI_API_KEY_11: ${{ secrets.GEMINI_API_KEY_11 }}
+          GEMINI_API_KEY_12: ${{ secrets.GEMINI_API_KEY_12 }}
+        run: python recap.py
 
-      # Save the output files so you can download them from the Actions tab
+      # Deliverables and lore. Chapter MP4s stay in the cache, not in artifacts:
+      # uploading 1.8 GB every run would only duplicate what the cache already holds.
       - name: Upload Generated Artifacts
-        if: always() 
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: recap-outputs
+          name: recap-outputs-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 90
+          if-no-files-found: warn
           path: |
             videos/*.mp4
-            **/*.txt
+            */cast/*.txt
+            */chapters/highest.txt
+            */chapters/*/done.json
 
-      # Sync changes back to your repository
-      - name: Commit and Push Video & Lore
-        if: always()
+      # Progress markers are what make "skip if already rendered" survive a fresh
+      # runner. Commit those (and lore) only — never media.
+      - name: Commit Lore and Chapter Markers
+        if: always() && !cancelled()
         run: |
-          git config --global user.name "AI Recapper Bot"
-          git config --global user.email "bot@github.com"
-          
-          # Add all new videos and text files
-          git add .
-          
-          # Commit only if there are changes to avoid errors
-          git commit -m "Auto-generate Manhwa Recap Video & Update Lore" || echo "No changes to commit"
-          
-          # Pull latest changes to avoid conflicts, then push
-          git pull --rebase origin main || true
-          git push
+          git config user.name "AI Recapper Bot"
+          git config user.email "bot@github.com"
+
+          git add -- '*/cast/*.txt' '*/chapters/highest.txt' '*/chapters/*/done.json' || true
+
+          if git diff --cached --quiet; then
+            echo "No lore or marker changes to commit."
+            exit 0
+          fi
+
+          for attempt in 1 2 3; do
+            if git fetch --depth=1 origin "$GITHUB_REF_NAME"; then
+              # A shallow clone cannot rebase across divergent tips. Restack the staged
+              # changes onto the fetched tip and commit there: always a fast-forward push.
+              git reset --soft FETCH_HEAD
+              if git diff --cached --quiet; then
+                echo "Remote already has these lore changes."
+                exit 0
+              fi
+              git commit -m "Update lore and chapter markers"
+              if git push; then
+                echo "Pushed on attempt $attempt."
+                exit 0
+              fi
+            fi
+            sleep 5
+          done
+
+          echo "::warning::Could not push lore/markers after 3 attempts; deliverables are still in artifacts."
