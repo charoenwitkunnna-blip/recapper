@@ -100,7 +100,7 @@ CHILD_ENV = dict(os.environ)
 
 GEMINI_MODEL = (os.environ.get("GEMINI_MODEL") or "gemini-flash-latest").strip()
 GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-GEMINI_TIMEOUT = 300
+GEMINI_TIMEOUT = 60
 print(f"[i] Loaded {len(GEMINI_API_KEYS)} Gemini API key(s); model={GEMINI_MODEL}")
 
 def describe_error(exc):
