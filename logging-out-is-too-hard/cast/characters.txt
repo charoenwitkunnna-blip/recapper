@@ -1,0 +1,15 @@
+Name: Protagonist
+Role: Main Character
+Appearance: Short black hair, sweaty face with bruises and determined eyes wearing casual leather and fabric armor.
+Personality: Resilient, sharp, and focused under pressure.
+--------------------
+Name: Old Companion
+Role: Supporting Ally
+Appearance: White hair, gray beard, wearing heavy battered armor and carrying a spear.
+Personality: Selfless, weary, and protective.
+--------------------
+Name: GM Dane
+Role: Game Master
+Appearance: Wearing a white hooded cloak with golden accents and a black decorative mask with glowing blue eyes.
+Personality: Cold, absolute, and unyielding.
+--------------------
