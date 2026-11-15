@@ -19,7 +19,7 @@ on:
         default: ''
         type: string
       gemini_model:
-        description: 'Gemini model for chapter analysis (e.g. gemini-3.5-flash-lite, gemini-flash-latest). Leave empty for the default.'
+        description: 'Gemini model for chapter analysis (e.g. gemini-3.5-flash-lite, gemini-flash-latest). Leave empty for gemini-3.5-flash-lite.'
         required: false
         default: ''
         type: string

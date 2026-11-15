@@ -98,7 +98,7 @@ for _name in [n for n in os.environ if n.startswith("GEMINI_API_KEY") or n == "A
     os.environ.pop(_name, None)
 CHILD_ENV = dict(os.environ)
 
-GEMINI_MODEL = (os.environ.get("GEMINI_MODEL") or "gemini-flash-latest").strip()
+GEMINI_MODEL = (os.environ.get("GEMINI_MODEL") or "gemini-3.5-flash-lite").strip()
 GEMINI_ENDPOINT = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
 GEMINI_TIMEOUT = 180
 print(f"[i] Loaded {len(GEMINI_API_KEYS)} Gemini API key(s); model={GEMINI_MODEL}")
