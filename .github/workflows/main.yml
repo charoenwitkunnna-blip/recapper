@@ -18,6 +18,11 @@ on:
         required: false
         default: ''
         type: string
+      gemini_model:
+        description: 'Gemini model for chapter analysis (e.g. gemini-3.5-flash-lite, gemini-flash-latest). Leave empty for the default.'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -114,6 +119,7 @@ jobs:
           PYTHONUNBUFFERED: '1'
           START_URL: ${{ inputs.manga_url }}
           MAX_CHAPTERS: ${{ inputs.max_chapters }}
+          GEMINI_MODEL: ${{ inputs.gemini_model }}
           GEMINI_API_KEY_1: ${{ secrets.GEMINI_API_KEY_1 }}
           GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
           GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
