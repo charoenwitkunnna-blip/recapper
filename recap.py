@@ -125,7 +125,17 @@ FFPROBE = shutil.which("ffprobe") or "ffprobe"
 MIN_CHAPTER_SECONDS = 5.0
 MARKER_NAME = "done.json"
 RENDER_VERSION = 1
-FFMPEG_WORKERS = max(1, min(4, os.cpu_count() or 2))
+FFMPEG_WORKERS = max(1, min(2, os.cpu_count() or 2))
+FFMPEG_THREADS = max(1, min(2, (os.cpu_count() or 2) // FFMPEG_WORKERS))
+_kokoro = None
+kokoro_lock = threading.Lock()
+
+
+def get_kokoro():
+    global _kokoro
+    if _kokoro is None:
+        _kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
+    return _kokoro
 
 
 class ChapterError(RuntimeError):
@@ -449,8 +459,7 @@ def process_chapter(chapter_url):
             f.write(full_narration)
 
     print(f"[{chap_num}] Preparing Audio & Assets Concurrently...")
-    kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
-    kokoro_lock = threading.Lock()
+    kokoro = get_kokoro()
     
     def prepare_panel_assets(i, block):
         img_idx = block.get('image_index')
@@ -496,38 +505,38 @@ def process_chapter(chapter_url):
         aspect_ratio = crop.height / crop.width
         effect = block.get('effect', 'zoom_in').lower()
         
-        common_flags =["-c:v", "libx264", "-preset", "faster", "-crf", "28", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
+        common_flags =["-c:v", "libx264", "-threads", str(FFMPEG_THREADS), "-preset", "faster", "-crf", "28", "-c:a", "pcm_s16le", "-ar", "44100", "-af", "apad", "-t", str(video_dur)]
         
         target_w = 1080 
         target_h = int(target_w * aspect_ratio)
 
-        if target_h > 2500:
+        if target_h > 1350:
             if effect not in['pan_up', 'pan_down']: effect = 'pan_down'
             bg = crop.resize((1920, target_h)).filter(ImageFilter.GaussianBlur(40))
             fg = crop.resize((target_w, target_h), Image.Resampling.LANCZOS)
             bg.paste(fg, ((1920 - target_w) // 2, 0)) 
-            bg.save(f_path)
+            bg.save(f_path, quality=95, subsampling=0)
             
             if effect == 'pan_up':
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"crop=1920:1080:0:max(0\\,(in_h-1080)-100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
+                       "-vf", f"crop=1920:1080:0:(in_h-1080)*(1-min(1\\,t/{max(video_dur - 1/30, 1/30):.6f})),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
             else:
                 cmd =["ffmpeg", "-y", "-loop", "1", "-framerate", "30", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"crop=1920:1080:0:min(in_h-1080\\,100*t),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
+                       "-vf", f"crop=1920:1080:0:(in_h-1080)*min(1\\,t/{max(video_dur - 1/30, 1/30):.6f}),fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
         else:
             bg = crop.resize((1920, 1080)).filter(ImageFilter.GaussianBlur(40))
             scale_f = min(1920 / crop.width, 1080 / crop.height)
             s_w, s_h = int(crop.width * scale_f), int(crop.height * scale_f)
             bg.paste(crop.resize((s_w, s_h), Image.Resampling.LANCZOS), ((1920 - s_w) // 2, (1080 - s_h) // 2))
-            bg.save(f_path)
+            bg.save(f_path, quality=95, subsampling=0)
 
             # Jitter Fix: Slightly expanded initial scale before zoompan + lower zoom intensity limits integer-rounding jitter
             if effect == 'zoom_out': 
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=4000x2250,zoompan=z='1.15-(0.15/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
+                       "-vf", f"scale=2560x1440,zoompan=z='1.15-(0.15/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags +[v_out]
             else:
                 cmd =["ffmpeg", "-y", "-i", f_path, "-i", audio_path, 
-                       "-vf", f"scale=4000x2250,zoompan=z='1.00+(0.15/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
+                       "-vf", f"scale=2560x1440,zoompan=z='1.00+(0.15/{frames})*on':d={frames}:x='iw/2-(iw/zoom)/2':y='ih/2-(ih/zoom)/2':s=1920x1080:fps=30,setsar=1,format=yuv420p"] + common_flags + [v_out]
         
         return (cmd, v_out)
 
@@ -641,7 +650,7 @@ def create_shorts_teaser():
 
     print("Generating Call-to-Action Audio...")
     teaser_audio_text = "Want to see what happens next? Watch the full recap on my channel!"
-    kokoro = Kokoro("kokoro-v1.0.onnx", "voices-v1.0.bin")
+    kokoro = get_kokoro()
     try:
         samples, _ = kokoro.create(teaser_audio_text, voice=VOICE_MODEL, speed=AUDIO_SPEED, lang="en-us")
     except:
@@ -685,7 +694,10 @@ def create_shorts_teaser():
 
     # Because base video is natively 1.1x speed, we apply a 1.25x speedup modifier to reach ~1.375x fast pacing.
     # setpts=0.8*PTS handles the video speed. atempo=1.25 handles audio speed. They stay perfectly synced!
-    vf_string = "[0:v]setpts=0.8*PTS,scale=-1:1920,crop=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[0:v]setpts=0.8*PTS,scale=1080:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
+    # Crop away the landscape render's sidebars before placing the central comic
+    # on a vertical canvas. Existing landscape renders cannot recover artwork
+    # beyond this central square; direct portrait rendering would require sources.
+    vf_string = "[0:v]setpts=0.8*PTS,crop=1080:1080:(iw-1080)/2:0,split=2[bgsrc][fg];[bgsrc]scale=1080:1920,boxblur=luma_radius=25:luma_power=1[bg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1[vout]"
     af_string = "[0:a]atempo=1.25[aout]"
     
     hook = _run([
