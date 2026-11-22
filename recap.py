@@ -32,7 +32,16 @@ else:
     try:
         MAX_CHAPTERS_TO_PROCESS = int(max_chap_env)
     except ValueError:
-        MAX_CHAPTERS_TO_PROCESS = 1 
+        MAX_CHAPTERS_TO_PROCESS = 1
+
+# Wall-clock budget (minutes) for starting new chapters. Once it is spent the loop
+# stops cleanly, so the recap still gets stitched and the workflow's cache save runs,
+# instead of the job being killed at its timeout with nothing saved. 0 = no limit.
+try:
+    RUN_BUDGET_MINUTES = float(os.environ.get("RUN_BUDGET_MINUTES", "0") or 0)
+except ValueError:
+    RUN_BUDGET_MINUTES = 0.0
+RUN_DEADLINE = time.time() + RUN_BUDGET_MINUTES * 60 if RUN_BUDGET_MINUTES > 0 else None
 
 url_parts =[p for p in START_URL.split('/') if p]
 MANGA_NAME = url_parts[-2] if len(url_parts) >= 2 else "manga"
@@ -792,6 +801,10 @@ processed = 0
 MAX_RETRIES = 3
 
 while current_target and processed < MAX_CHAPTERS_TO_PROCESS:
+    if RUN_DEADLINE is not None and time.time() >= RUN_DEADLINE:
+        print(f"\n[i] Run budget of {RUN_BUDGET_MINUTES:g} min reached. Not starting {current_target}.")
+        print("[i] Stopping here to stitch and save progress; the next run resumes from this chapter.")
+        break
     chapter_retries = 0
     success = False
     next_target = None
