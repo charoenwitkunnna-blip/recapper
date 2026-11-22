@@ -1,0 +1,8 @@
+# Pinned to the versions from the last known-good run (2026-11-15).
+# Bump deliberately: a surprise upstream release can break a multi-hour run.
+seleniumbase==4.58.0
+requests==2.34.2
+pillow==12.3.0
+numpy==2.2.6
+soundfile==0.14.0
+kokoro-onnx==0.6.1

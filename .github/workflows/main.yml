@@ -50,6 +50,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          # Restores ~/.cache/pip before the install below, keyed on the pinned
+          # requirements, so a version bump busts the cache automatically.
+          cache: pip
+          cache-dependency-path: requirements.txt
 
       # System dependencies for video/audio processing
       - name: Install System Dependencies
@@ -60,20 +64,8 @@ jobs:
       # Python environment setup
       - name: Install Python Dependencies
         run: |
-          pip install seleniumbase requests pillow numpy soundfile kokoro-onnx
+          pip install -r requirements.txt
           seleniumbase install chromedriver
-
-      # Cache the pip download/wheel cache and the seleniumbase driver store so
-      # repeated runs skip re-downloading packages and the Chrome driver.
-      # Keyed on a manual salt: bump it only when the install list changes.
-      - name: Restore pip and driver caches
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-            ~/.cache/seleniumbase
-            ~/.cache/selenium
-          key: recap-deps-v1
 
       # Static cache: ~300 MB of TTS weights, re-downloaded on every run otherwise.
       - name: Restore TTS models
@@ -87,8 +79,10 @@ jobs:
       # Rolling cache: already-rendered chapters. Without this, dropping videos from
       # git would make every run regenerate the whole series from scratch.
       # Note: repo cache budget is 10 GB; older entries evict automatically.
+      # Restore and save are split so the save can run even when the job fails
+      # (plain actions/cache only saves on success, so a timed-out run lost everything).
       - name: Restore rendered chapters
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             */chapters
@@ -132,7 +126,29 @@ jobs:
           GEMINI_API_KEY_10: ${{ secrets.GEMINI_API_KEY_10 }}
           GEMINI_API_KEY_11: ${{ secrets.GEMINI_API_KEY_11 }}
           GEMINI_API_KEY_12: ${{ secrets.GEMINI_API_KEY_12 }}
+          # Stop starting new chapters after this many minutes, leaving ~50 min of the
+          # 350 min timeout for the in-flight chapter, stitching, shorts and uploads.
+          RUN_BUDGET_MINUTES: '300'
         run: python recap.py
+
+      # An empty save would become the newest "recap-chapters-" entry and shadow the
+      # last good cache on the next restore, so only save when there is something in it.
+      - name: Check rendered chapters
+        id: chapters
+        if: always() && !cancelled()
+        run: |
+          count=$(find . -path '*/chapters/*/video.mp4' -size +0 2>/dev/null | wc -l)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Found $count rendered chapter video(s)."
+
+      - name: Save rendered chapters
+        if: always() && !cancelled() && steps.chapters.outputs.count != '0'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            */chapters
+            videos
+          key: recap-chapters-${{ github.run_id }}-${{ github.run_attempt }}
 
       # Deliverables and lore. Chapter MP4s stay in the cache, not in artifacts:
       # uploading 1.8 GB every run would only duplicate what the cache already holds.
@@ -157,7 +173,11 @@ jobs:
           git config user.name "AI Recapper Bot"
           git config user.email "bot@github.com"
 
-          git add -- '*/cast/*.txt' '*/chapters/highest.txt' '*/chapters/*/done.json' || true
+          # Plain `git add` aborts the whole add if ANY pathspec matches nothing (e.g. no
+          # done.json yet), silently dropping the lore too. ls-files tolerates misses.
+          git ls-files -z -mo --exclude-standard -- \
+            '*/cast/*.txt' '*/chapters/highest.txt' '*/chapters/*/done.json' \
+            | xargs -0 -r git add --
 
           if git diff --cached --quiet; then
             echo "No lore or marker changes to commit."
